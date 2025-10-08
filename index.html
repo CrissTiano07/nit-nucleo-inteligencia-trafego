@@ -1,0 +1,1994 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Gestão Integrada v9.1 - Precisão Cirúrgica</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --color-primary: #2563EB; --color-primary-hover: #1D4ED8;
+            --color-bg: #F8FAFC; --color-surface: #FFFFFF; --color-border: #E2E8F0;
+            --color-text-primary: #0F172A; --color-text-secondary: #334155; --color-text-tertiary: #64748B;
+            --color-success: #16A34A; --color-warning: #CA8A04; --color-danger: #DC2626; --color-info: #0284C7;
+            --shadow-focus-ring: 0 0 0 2px var(--color-bg ), 0 0 0 4px var(--color-primary);
+            --font-family-sans: 'Inter', sans-serif;
+            --font-family-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+        body[data-theme="dark"] {
+            --color-primary: #3B82F6; --color-primary-hover: #60A5FA;
+            --color-bg: #0F172A; --color-surface: #1E293B; --color-border: #334155;
+            --color-text-primary: #F1F5F9; --color-text-secondary: #CBD5E1; --color-text-tertiary: #94A3B8;
+            --color-success: #22C55E; --color-warning: #EAB308; --color-danger: #EF4444; --color-info: #0EA5E9;
+        }
+        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
+        body { font-family: var(--font-family-sans); background-color: var(--color-bg); color: var(--color-text-primary); padding: 16px; box-sizing: border-box; font-size: 14px; }
+        
+        * { scrollbar-width: thin; scrollbar-color: var(--color-border) transparent; }
+        *::-webkit-scrollbar { width: 8px; height: 8px; }
+        *::-webkit-scrollbar-track { background: transparent; }
+        *::-webkit-scrollbar-thumb { background-color: var(--color-border); border-radius: 10px; border: 3px solid transparent; background-clip: content-box; }
+        *::-webkit-scrollbar-thumb:hover { background-color: var(--color-text-tertiary); }
+
+        *:focus-visible { outline: none; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--color-primary); box-shadow: var(--shadow-focus-ring); }
+        .main-container { display: flex; flex-direction: column; height: calc(100vh - 32px); }
+        .tab-navigation { display: flex; border-bottom: 1px solid var(--color-border); margin-bottom: 16px; flex-shrink: 0; }
+        .tab-button { padding: 10px 20px; cursor: pointer; background: none; border: none; color: var(--color-text-tertiary); font-weight: 600; font-size: 14px; border-bottom: 2px solid transparent; }
+        .tab-button:hover { color: var(--color-text-primary); background-color: var(--color-border); }
+        .tab-button.active { color: var(--color-primary); border-bottom-color: var(--color-primary); }
+        .tab-button i { margin-right: 8px; }
+        .tab-controls { margin-left: auto; display: flex; align-items: center; padding-right: 10px; }
+        
+        .tab-content { display: none; flex-grow: 1; min-height: 0; }
+        .tab-content.active { display: flex; flex-direction: column; animation: fadeIn 0.5s; height: 100%; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; height: 100%; min-height: 0; }
+        .grid-column { display: flex; flex-direction: column; gap: 16px; min-height: 0; }
+        .painel { display: flex; flex-direction: column; background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); min-height: 0; }
+        .painel.flex-grow { flex-grow: 1; }
+        .painel-header { padding: 12px 16px; border-bottom: 1px solid var(--color-border); flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; }
+        .painel-header h3 { margin: 0; font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+        .painel-body { padding: 16px; flex-grow: 1; display: flex; flex-direction: column; gap: 16px; min-height: 0; overflow-y: auto; }
+        
+        .painel-footer { padding: 16px; border-top: 1px solid var(--color-border); flex-shrink: 0; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-weight: 500; margin-bottom: 8px; font-size: 14px; color: var(--color-text-secondary); }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; resize: none; border-radius: 6px; border: 1px solid var(--color-border); padding: 12px; background-color: var(--color-bg); font-family: var(--font-family-sans); font-size: 13px; color: var(--color-text-secondary); box-sizing: border-box; }
+        .mono-font { font-family: var(--font-family-mono); }
+        body[data-theme="dark"] textarea[readonly] { color: var(--color-text-primary); }
+        .btn { padding: 8px 16px; border: 1px solid transparent; border-radius: 6px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; }
+        .btn-primario { background-color: var(--color-primary); color: white; }
+        .btn-primario:hover:not(:disabled) { background-color: var(--color-primary-hover); }
+        .btn-secundario { background-color: var(--color-surface); color: var(--color-text-primary); border-color: var(--color-border); }
+        .btn-secundario:hover:not(:disabled) { background-color: var(--color-bg); }
+        .btn-icon { background: none; border: none; cursor: pointer; color: var(--color-text-tertiary); font-size: 16px; padding: 4px; border-radius: 50%; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; }
+        .btn-icon:hover { color: var(--color-text-primary); background-color: var(--color-border); }
+        #tab-semaforo .grid-container { grid-template-columns: 360px 1fr; }
+        .painel-operacional-wrapper { position: relative; overflow: hidden; height: 100%; flex-grow: 1; min-height: 0; }
+        #gaveta-arquivados { position: absolute; top: 0; right: 0; width: 300px; height: 100%; background-color: var(--color-surface); border-left: 1px solid var(--color-border); z-index: 10; transform: translateX(100%); transition: transform 0.3s ease-in-out; display: flex; flex-direction: column; }
+        #gaveta-arquivados.open { transform: translateX(0); }
+        #kanban-wrapper.gaveta-open { margin-right: 300px; }
+        .kanban-board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; height: 100%; }
+        .kanban-column { background-color: var(--color-bg); border-radius: 12px; display: flex; flex-direction: column; height: 100%; overflow: hidden; min-height: 0; }
+        .kanban-column-header { padding: 10px 12px; font-weight: 600; font-size: 13px; border-bottom: 1px solid var(--color-border); flex-shrink: 0; display: flex; align-items: center; gap: 8px; color: var(--color-text-secondary); }
+        .kanban-column-header .header-text { flex-grow: 1; }
+        .card-count { font-size: 12px; background-color: var(--color-border); color: var(--color-text-secondary); font-weight: 600; padding: 2px 8px; border-radius: 8px; }
+        .kanban-cards-container { padding: 8px; flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+        .kanban-card { background-color: var(--color-surface); padding: 12px; border-radius: 8px; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); cursor: grab; border: 1px solid var(--color-border); }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 8px; }
+        .card-header strong { font-size: 16px; font-weight: 600; }
+        .card-status-tag { background-color: color-mix(in srgb, var(--color-warning) 15%, transparent); color: var(--color-warning); padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        .card-body { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 8px; line-height: 1.4; }
+        .card-despacho-info { font-size: 11px; color: var(--color-info); margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--color-border); }
+        .card-footer { display: flex; justify-content: flex-end; align-items: center; margin-top: auto; padding-top: 8px; border-top: 1px solid var(--color-border); gap: 4px; }
+        .btn-card-action { background: none; border: none; cursor: pointer; color: var(--color-text-tertiary); font-size: 16px; padding: 4px; }
+        .btn-card-action.copy-location:hover { color: var(--color-warning); }
+        .btn-card-action.dispatch:hover { color: var(--color-primary); }
+        .btn-card-action.edit:hover { color: var(--color-info); }
+        .btn-card-action.complete:hover { color: var(--color-success); }
+        .balanco-compacto { display: flex; justify-content: space-around; text-align: center; padding: 8px 0; }
+        .balanco-item span { font-size: 11px; font-weight: 500; text-transform: uppercase; }
+        .balanco-item strong { font-size: 24px; font-weight: 700; display: block; }
+        .form-check { display: flex; align-items: center; gap: 8px; padding: 8px 0; }
+        .kanban-cards-container.drag-over { background-color: var(--color-bg); }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+        .item-dinamico { border: 1px solid var(--color-border); padding: 16px; margin-bottom: 10px; border-radius: 8px; background: var(--color-bg); position: relative; }
+        .btn-remover { position: absolute; top: 8px; right: 8px; background: var(--color-danger); color: white; border: none; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        #saida-turno { background: var(--color-bg); padding: 15px; white-space: pre-wrap; border-radius: 6px; border: 1px solid var(--color-border); flex-grow: 1; }
+        .reboques-main-grid { grid-template-columns: 300px 1fr 350px; }
+        .reboques-kanban-container { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; height: 100%; }
+        .eventos-kanban-container { display: flex; flex-direction: column; height: 100%; }
+        .eventos-column { display: flex; flex-direction: column; gap: 8px; height: 100%; }
+        .reboque-grid, .eventos-grid { align-content: start; }
+        .reboque-card { background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; cursor: grab; transition: all 0.2s ease; }
+        .reboque-card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .reboque-card.dragging { opacity: 0.5; transform: rotate(5deg); }
+        .reboque-card-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .reboque-card-header strong { font-size: 16px; font-weight: 600; }
+        .reboque-card .info-line { font-size: 12px; color: var(--color-text-secondary); }
+        .reboque-card .info-line i { margin-right: 6px; width: 14px; text-align: center; }
+        .reboque-card .status-tag { padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+        .reboque-card .status-tag.disponivel { background-color: color-mix(in srgb, var(--color-success) 15%, transparent); color: var(--color-success); }
+        .reboque-card .status-tag.atuando { background-color: color-mix(in srgb, var(--color-warning) 15%, transparent); color: var(--color-warning); }
+        .reboque-card-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--color-border); }
+        .reboque-ocorrencia-info { font-size: 11px; background-color: var(--color-bg); padding: 6px; border-radius: 4px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .reboque-column { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+        .reboque-column h4 { text-align: center; margin: 8px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
+        .evento-card { background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; transition: all 0.2s ease; }
+        .evento-card:hover { box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .evento-card.drop-zone { border: 2px dashed var(--color-primary); background-color: color-mix(in srgb, var(--color-primary) 5%, transparent); }
+        .evento-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+        .evento-card-header strong { font-size: 14px; font-weight: 600; color: var(--color-primary); }
+        .evento-card-body { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 8px; }
+        .evento-card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--color-border); }
+        .evento-reboquistas { display: flex; flex-wrap: wrap; gap: 4px; flex-grow: 1; }
+        .evento-reboquista-tag { background-color: var(--color-primary); color: white; padding: 2px 6px; border-radius: 8px; font-size: 10px; font-weight: 600; }
+        .evento-actions { display: flex; gap: 4px; }
+        .config-list-item { display: flex; align-items: center; padding: 10px; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; margin-bottom: 8px; }
+        .config-list-item span { flex-grow: 1; }
+        .config-list-item .btn-icon { margin-left: 8px; }
+        .add-item-form { display: flex; gap: 8px; }
+        .add-item-form input { flex-grow: 1; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; visibility: hidden; transition: opacity 0.3s, visibility 0.3s; }
+        .modal-overlay.visible { opacity: 1; visibility: visible; }
+        .modal-container { background-color: var(--color-surface); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); border-radius: 12px; width: 90%; max-width: 500px; }
+        .modal-header { padding: 16px 24px; border-bottom: 1px solid var(--color-border); font-size: 18px; font-weight: 600; }
+        .modal-body { padding: 24px; overflow-y: auto; }
+        .modal-footer { padding: 16px 24px; border-top: 1px solid var(--color-border); display: flex; justify-content: flex-end; gap: 8px; }
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 2000; }
+        .toast { background-color: var(--color-success); color: white; padding: 12px 24px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); z-index: 1001; transform: translateX(120%); transition: transform 0.3s ease; margin-bottom: 10px; }
+        .toast.show { transform: translateX(0); }
+        .toast.error { background-color: var(--color-danger); }
+        .toast.warning { background-color: var(--color-warning); }
+        .toast.info { background-color: var(--color-info); }
+        #theme-toggle .fa-sun { display: none; } #theme-toggle .fa-moon { display: block; }
+        body[data-theme="dark"] #theme-toggle .fa-sun { display: block; } body[data-theme="dark"] #theme-toggle .fa-moon { display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <div class="tab-navigation">
+            <button class="tab-button active" data-tab="tab-semaforo"><i class="fas fa-traffic-light"></i> Relatório Semafórico</button>
+            <button class="tab-button" data-tab="tab-turno"><i class="fas fa-user-clock"></i> Relatório de Turno</button>
+            <button class="tab-button" data-tab="tab-reboques"><i class="fas fa-truck-pickup"></i> Reboques</button>
+            <button class="tab-button" data-tab="tab-config"><i class="fas fa-cogs"></i> Configurações</button>
+            <div class="tab-controls">
+                <button id="theme-toggle" class="btn-icon" title="Alternar Tema"><i class="fas fa-moon"></i><i class="fas fa-sun"></i></button>
+                <button id="btn-limpar-painel" class="btn-icon" title="Limpar todo o painel"><i class="fas fa-trash-alt" style="color: var(--color-danger);"></i></button>
+            </div>
+        </div>
+
+        <div id="tab-semaforo" class="tab-content active">
+            <div class="grid-container" style="grid-template-columns: 360px 1fr;">
+                <div class="grid-column">
+                    <div class="painel">
+                        <div class="painel-header"><h3><i class="fas fa-paste"></i> 1. Entrada de Dados</h3></div>
+                        <div class="painel-body">
+                            <textarea id="relatorio-bruto-input" class="mono-font" placeholder="Cole aqui o relatório bruto..." rows="10"></textarea>
+                            <button id="btn-processar" class="btn btn-primario" style="width:100%; margin-top:10px;"><i class="fas fa-cogs"></i> Processar</button>
+                        </div>
+                    </div>
+                    <div class="painel">
+                        <div class="painel-header"><h3><i class="fas fa-clipboard-check"></i> 2. Saída</h3></div>
+                        <div class="painel-body">
+                            <div class="balanco-compacto">
+                                <div class="balanco-item"><span>Ocorrências</span><strong id="display-total">0</strong></div>
+                                <div class="balanco-item"><span>Normalizados</span><strong id="display-normalizados">0</strong></div>
+                                <div class="balanco-item"><span>Pendentes</span><strong id="display-pendentes">0</strong></div>
+                            </div>
+                            <textarea id="relatorio-final-preview" class="mono-font" readonly placeholder="A pré-visualização do relatório aparecerá aqui."></textarea>
+                            <div class="form-check">
+                                <input type="checkbox" id="check-incluir-normalizados"><label for="check-incluir-normalizados">Incluir Normalizados</label>
+                            </div>
+                            <button id="btn-visualizar-relatorio" class="btn btn-primario" style="width:100%;"><i class="fas fa-eye"></i> Visualizar Relatório</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid-column">
+                    <div class="painel-operacional-wrapper">
+                        <div id="kanban-wrapper">
+                            <div class="kanban-board">
+                                <div class="kanban-column" id="coluna-espera">
+                                    <div class="kanban-column-header">
+                                        <span class="header-text">Aguardando Atendimento</span>
+                                        <span class="card-count" id="count-espera">0</span>
+                                    </div>
+                                    <div class="kanban-cards-container"></div>
+                                </div>
+                                <div class="kanban-column" id="coluna-sem-necessidade">
+                                    <div class="kanban-column-header">
+                                        <span class="header-text">Sem Necessidade</span>
+                                        <span class="card-count" id="count-sem-necessidade">0</span>
+                                    </div>
+                                    <div class="kanban-cards-container"></div>
+                                </div>
+                                <div class="kanban-column" id="coluna-vl">
+                                    <div class="kanban-column-header">
+                                        <span class="header-text">Via Livre</span>
+                                        <span class="card-count" id="count-vl">0</span>
+                                    </div>
+                                    <div class="kanban-cards-container"></div>
+                                </div>
+                                <div class="kanban-column" id="coluna-amc">
+                                    <div class="kanban-column-header">
+                                        <span class="header-text">AMC</span>
+                                        <span class="card-count" id="count-amc">0</span>
+                                    </div>
+                                    <div class="kanban-cards-container"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="gaveta-arquivados">
+                            <div class="kanban-column-header">
+                                <span class="header-text">Normalizados</span>
+                                <span class="card-count" id="count-normalizados-gaveta">0</span>
+                                <button id="btn-toggle-arquivados" class="btn-icon" title="Fechar gaveta"><i class="fas fa-times"></i></button>
+                            </div>
+                            <div class="kanban-cards-container" id="coluna-normalizados"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-turno" class="tab-content">
+            <div class="grid-container">
+                <div class="grid-column">
+                    <div class="painel">
+                        <div class="painel-header"><h3><i class="fas fa-edit"></i> Dados do Turno</h3></div>
+                        <div class="painel-body">
+                            <div class="form-grid">
+                                <div class="form-group"><label>Turno:</label><select
+ id="turno-turno"><option value="MANHÃ">MANHÃ</option><option value="TARDE">TARDE</option><option value="NOITE">NOITE</option></select></div>
+                                <div class="form-group"><label>Data:</label><input type="date" id="turno-data"></div>
+                                <div class="form-group"><label>Total de Agentes:</label><input type="number" id="turno-totalAgentes" min="1"></div>
+                                <div class="form-group"><label>Monitor:</label><input type="text" id="turno-monitor" list="lista-monitores"></div>
+                                <div class="form-group"><label>Supervisor:</label><input type="text" id="turno-supervisor" list="lista-supervisores"></div>
+                                <div class="form-group"><label>VLVT:</label><input type="text" id="turno-vlvt"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="painel flex-grow">
+                        <div class="painel-header"><h3><i class="fas fa-plus-circle"></i> Ocorrências</h3></div>
+                        <div class="painel-body">
+                            <button id="btn-add-ocorrencia" class="btn btn-secundario" style="width: 100%; flex-shrink: 0;"><i class="fas fa-plus"></i> Adicionar Ocorrência</button>
+                            <div id="turno-ocorrencias-container" style="flex-grow: 1; overflow-y: auto; padding: 4px;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid-column">
+                    <div class="painel flex-grow">
+                        <div class="painel-header"><h3><i class="fas fa-file-alt"></i> Relatório de Turno</h3></div>
+                        <div class="painel-body">
+                            <textarea id="saida-turno" readonly placeholder="O relatório de turno aparecerá aqui..."></textarea>
+                            <div style="display: flex; gap: 8px; flex-shrink: 0;">
+                                <button id="btn-gerar-relatorio-turno" class="btn btn-primario" style="flex: 1;"><i class="fas fa-cogs"></i> Gerar Relatório</button>
+                                <button id="btn-copiar-relatorio-turno" class="btn btn-secundario" style="flex: 1;"><i class="fas fa-copy"></i> Copiar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-reboques" class="tab-content">
+            <div class="grid-container reboques-main-grid">
+                <div class="grid-column">
+                    <div class="painel">
+                        <div class="painel-header"><h3><i class="fas fa-paste"></i> Entrada de Plantão</h3></div>
+                        <div class="painel-body">
+                            <textarea id="reboque-bruto-input" class="mono-font" placeholder="Cole aqui a lista de reboquistas de plantão..." rows="8"></textarea>
+                            <button id="btn-processar-reboques" class="btn btn-primario" style="width:100%; margin-top:10px;"><i class="fas fa-cogs"></i> Processar Plantão</button>
+                        </div>
+                    </div>
+                    <div class="painel">
+                        <div class="painel-header"><h3><i class="fas fa-tachometer-alt"></i> Status da Frota</h3></div>
+                        <div class="painel-body">
+                            <div class="balanco-compacto">
+                                <div class="balanco-item">
+                                    <span>Disponíveis</span><strong id="reboques-count-disponiveis" style="color: var(--color-success);">0</strong>
+                                </div>
+                                <div class="balanco-item">
+                                    <span>Atuando</span><strong id="reboques-count-atuando" style="color: var(--color-warning);">0</strong>
+                                </div>
+                                <div class="balanco-item">
+                                    <span>Total</span><strong id="reboques-count-total">0</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="painel">
+                        <div class="painel-header"><h3><i class="fas fa-plus-circle"></i> Gerenciamento</h3></div>
+                        <div class="painel-body">
+                            <button id="btn-add-reboquista" class="btn btn-secundario" style="width: 100%;"><i class="fas fa-user-plus"></i> Adicionar Reboquista</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid-column">
+                    <div class="painel flex-grow">
+                        <div class="painel-header"><h3><i class="fas fa-truck-pickup"></i> Reboquistas</h3></div>
+                        <div class="painel-body reboques-kanban-container">
+                            <div class="reboque-column">
+                                <h4 style="color: var(--color-success);">Disponíveis</h4>
+                                <div id="reboques-disponiveis" class="reboque-grid painel-body"></div>
+                            </div>
+                            <div class="reboque-column">
+                                <h4 style="color: var(--color-warning);">Em Atendimento</h4>
+                                <div id="reboques-atuando" class="reboque-grid painel-body"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid-column">
+                    <div class="painel flex-grow">
+                        <div class="painel-header"><h3><i class="fas fa-calendar-alt"></i> Eventos em Aberto</h3></div>
+                        <div class="painel-body eventos-kanban-container">
+                            <div class="eventos-column">
+                                <button id="btn-novo-evento" class="btn btn-primario" style="width: 100%; margin-bottom: 10px; flex-shrink: 0;"><i class="fas fa-plus-circle"></i> Novo Evento</button>
+                                <div id="eventos-abertos" class="eventos-grid painel-body"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-config" class="tab-content">
+            <div class="grid-container">
+                <div class="grid-column">
+                    <div class="painel flex-grow">
+                        <div class="painel-header"><h3><i class="fas fa-users"></i> Operadores</h3></div>
+                        <div class="painel-body">
+                            <div class="add-item-form" style="flex-shrink: 0;"><input type="text" id="input-add-operador" placeholder="Nome..."><button id="btn-add-operador" class="btn btn-primario"><i class="fas fa-plus"></i></button></div>
+                            <hr style="border-color: var(--color-border); margin: 16px 0; flex-shrink: 0;">
+                            <div class="config-list-container" id="lista-operadores"></div>
+                        </div>
+                    </div>
+                    <div class="painel flex-grow">
+                        <div class="painel-header"><h3><i class="fas fa-user-tie"></i> Supervisores</h3></div>
+                        <div class="painel-body">
+                            <div class="add-item-form" style="flex-shrink: 0;"><input type="text" id="input-add-supervisor" placeholder="Nome..."><button id="btn-add-supervisor" class="btn btn-primario"><i class="fas fa-plus"></i></button></div>
+                            <hr style="border-color: var(--color-border); margin: 16px 0; flex-shrink: 0;">
+                            <div class="config-list-container" id="lista-supervisores-config"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid-column">
+                    <div class="painel flex-grow">
+                        <div class="painel-header"><h3><i class="fas fa-headset"></i> Monitores</h3></div>
+                        <div class="painel-body">
+                            <div class="add-item-form" style="flex-shrink: 0;"><input type="text" id="input-add-monitor" placeholder="Nome..."><button id="btn-add-monitor" class="btn btn-primario"><i class="fas fa-plus"></i></button></div>
+                            <hr style="border-color: var(--color-border); margin: 16px 0; flex-shrink: 0;">
+                            <div class="config-list-container" id="lista-monitores-config"></div>
+                        </div>
+                    </div>
+                    <div class="painel flex-grow">
+                        <div class="painel-header"><h3><i class="fas fa-map-marker-alt"></i> Locais</h3></div>
+                        <div class="painel-body">
+                            <div class="add-item-form" style="flex-shrink: 0;"><input type="text" id="input-add-local" placeholder="Novo local..."><button id="btn-add-local" class="btn btn-primario"><i class="fas fa-plus"></i></button></div>
+                            <hr style="border-color: var(--color-border); margin: 16px 0; flex-shrink: 0;">
+                            <div class="config-list-container" id="lista-locais"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Datalists -->
+    <datalist id="lista-operadores-datalist"></datalist>
+    <datalist id="lista-supervisores"></datalist>
+    <datalist id="lista-monitores"></datalist>
+    <datalist id="lista-locais-datalist"></datalist>
+    <datalist id="lista-turnos">
+        <option value="MANHÃ"></option>
+        <option value="TARDE"></option>
+        <option value="NOITE"></option>
+    </datalist>
+
+    <!-- Modais -->
+    <div id="modal-relatorio" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">Relatório Semafórico</div>
+            <div class="modal-body">
+                <textarea id="modal-relatorio-texto" class="mono-font" readonly rows="15" style="width: 100%; border: none; resize: none; background: var(--color-bg);"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button id="btn-modal-copiar" class="btn btn-primario"><i class="fas fa-copy"></i> Copiar</button>
+                <button id="btn-modal-fechar" class="btn btn-secundario">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-despacho-semaforo" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">Despachar Equipe de Manutenção</div>
+            <div class="modal-body">
+                <input type="hidden" id="despacho-semaforo-card-id">
+                <div class="form-group">
+                    <label>Equipe / Representante:</label>
+                    <input type="text" id="despacho-semaforo-equipe" placeholder="Nome do responsável" list="lista-operadores-datalist">
+                </div>
+                <div class="form-group">
+                    <label>Viatura (VT):</label>
+                    <input type="text" id="despacho-semaforo-vt" placeholder="Número da viatura">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btn-despacho-semaforo-confirmar" class="btn btn-primario"><i class="fas fa-save"></i> Salvar Despacho</button>
+                <button id="btn-despacho-semaforo-cancelar" class="btn btn-secundario">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-acionamento-reboque" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">Acionamento de Reboque</div>
+            <div class="modal-body">
+                <input type="hidden" id="reboque-acionamento-card-id">
+                <div class="form-group">
+                    <label>Tipo de Evento:</label>
+                    <input type="text" id="reboque-evento-tipo" placeholder="Ex: ACIDENTE, PANE, GUINCHO...">
+                </div>
+                <div class="form-group">
+                    <label>Endereço:</label>
+                    <input type="text" id="reboque-evento-endereco" placeholder="Local da ocorrência">
+                </div>
+                <div class="form-group">
+                    <label>Horário (opcional):</label>
+                    <input type="time" id="reboque-evento-horario">
+                </div>
+                <div class="form-group">
+                    <label>Observações (opcional):</label>
+                    <textarea id="reboque-evento-obs" rows="3" placeholder="Informações adicionais..."></textarea>
+                </div>
+                <div id="multi-acionamento-reboquistas" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--color-border);">
+                    <label style="display: block; font-weight: 500; margin-bottom: 8px;">Reboquistas Acionados:</label>
+                    <div id="multi-acionamento-tags"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btn-reboque-acionamento-adicionar-outro" class="btn btn-secundario"><i class="fas fa-plus"></i> Acionar Outro</button>
+                <button id="btn-reboque-acionamento-confirmar" class="btn btn-primario"><i class="fas fa-paper-plane"></i> Finalizar e Copiar</button>
+                <button id="btn-reboque-acionamento-cancelar" class="btn btn-secundario">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-edicao-reboquista" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">Editar Reboquista</div>
+            <div class="modal-body">
+                <input type="hidden" id="reboque-edit-card-id">
+                <div class="form-group">
+                    <label>Nome:</label>
+                    <input type="text" id="reboque-edit-nome" placeholder="Nome do reboquista">
+                </div>
+                <div class="form-group">
+                    <label>VT:</label>
+                    <input type="text" id="reboque-edit-vt" placeholder="Número da viatura">
+                </div>
+                <div class="form-group">
+                    <label>Placa:</label>
+                    <input type="text" id="reboque-edit-placa" placeholder="Placa do veículo">
+                </div>
+                <div class="form-group">
+                    <label>Plantão até:</label>
+                    <input type="text" id="reboque-edit-plantao" placeholder="Ex: 18:00hs">
+                </div>
+                <div class="form-group">
+                    <label>Smart:</label>
+                    <input type="text" id="reboque-edit-smart" placeholder="Ex: (85) 98765-4321">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btn-reboque-edit-salvar" class="btn btn-primario"><i class="fas fa-save"></i> Salvar</button>
+                <button id="btn-reboque-edit-cancelar" class="btn btn-secundario">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-novo-evento" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">Novo Evento</div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Tipo de Evento:</label>
+                    <input type="text" id="evento-tipo" placeholder="Ex: COMANDO LEI SECA, APOIO AMC..." required>
+                </div>
+                <div class="form-group">
+                    <label>Endereço:</label>
+                    <input type="text" id="evento-endereco" placeholder="Local da ocorrência" required>
+                </div>
+                <div class="form-group">
+                    <label>Horário (opcional):</label>
+                    <input type="time" id="evento-horario">
+                </div>
+                <div class="form-group">
+                    <label>Observações (opcional):</label>
+                    <textarea id="evento-obs" rows="3" placeholder="Informações adicionais..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btn-evento-criar" class="btn btn-primario"><i class="fas fa-plus-circle"></i> Criar Evento</button>
+                <button id="btn-evento-cancelar" class="btn btn-secundario">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-edicao-evento" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">Editar Evento</div>
+            <div class="modal-body">
+                <input type="hidden" id="evento-edit-id">
+                <div class="form-group">
+                    <label>Tipo de Evento:</label>
+                    <input type="text" id="evento-edit-tipo" required>
+                </div>
+                <div class="form-group">
+                    <label>Endereço:</label>
+                    <input type="text" id="evento-edit-endereco" required>
+                </div>
+                <div class="form-group">
+                    <label>Horário (opcional):</label>
+                    <input type="time" id="evento-edit-horario">
+                </div>
+                <div class="form-group">
+                    <label>Observações (opcional):</label>
+                    <textarea id="evento-edit-obs" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btn-evento-edit-salvar" class="btn btn-primario"><i class="fas fa-save"></i> Salvar Alterações</button>
+                <button id="btn-evento-edit-cancelar" class="btn btn-secundario">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-edicao" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">Editar Ocorrência</div>
+            <div class="modal-body">
+                <input type="hidden" id="edicao-card-id">
+                <div class="form-group">
+                    <label>Código:</label>
+                    <input type="text" id="edicao-codigo" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Endereço:</label>
+                    <input type="text" id="edicao-endereco">
+                </div>
+                <div class="form-group">
+                    <label>Problema:</label>
+                    <select id="edicao-problema">
+                        <option value="APAGADO">APAGADO</option>
+                        <option value="PISCANTE">PISCANTE</option>
+                        <option value="TRAVADO">TRAVADO</option>
+                        <option value="INTERMITENTE">INTERMITENTE</option>
+                        <option value="N/I">N/I</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btn-edicao-salvar" class="btn btn-primario"><i class="fas fa-save"></i> Salvar</button>
+                <button id="btn-edicao-cancelar" class="btn btn-secundario">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-edicao-config" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">Editar Item</div>
+            <div class="modal-body">
+                <input type="hidden" id="config-edit-type">
+                <input type="hidden" id="config-edit-index">
+                <div class="form-group">
+                    <label>Nome:</label>
+                    <input type="text" id="config-edit-input">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btn-config-edit-salvar" class="btn btn-primario"><i class="fas fa-save"></i> Salvar</button>
+                <button id="btn-config-edit-cancelar" class="btn btn-secundario">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script>
+    (function() {
+        'use strict';
+
+        const AppState = {
+            STORAGE_KEY_SEMAFORO: 'gerador-premium-v9.1-semaforo',
+            STORAGE_KEY_TURNO: 'gerador-premium-v9.1-turno',
+            STORAGE_KEY_REBOQUES: 'gerador-premium-v9.1-reboques',
+            STORAGE_KEY_EVENTOS: 'gerador-premium-v9.1-eventos',
+            STORAGE_KEY_DADOS: 'gerador-premium-v9.1-dadosMestres',
+            cardIdCounter: 0,
+            reboqueIdCounter: 0,
+            eventoIdCounter: 0,
+            draggedCard: null,
+            placeholder: null,
+            dadosMestres: { operadores: [], supervisores: [], monitores: [], locais: [] },
+            multiAcionamentoState: {
+                reboquistas: [],
+                eventoData: null,
+                eventoCard: null
+            }
+        };
+
+        const DOM = {};
+
+        function queryDOM() {
+            const elements = {
+                tabButtons: document.querySelectorAll('.tab-button'),
+                tabContents: document.querySelectorAll('.tab-content'),
+                themeToggle: document.getElementById('theme-toggle'),
+                btnLimparPainel: document.getElementById('btn-limpar-painel'),
+                toastContainer: document.getElementById('toast-container'),
+                relatorioBrutoInput: document.getElementById('relatorio-bruto-input'),
+                btnProcessar: document.getElementById('btn-processar'),
+                relatorioFinalPreview: document.getElementById('relatorio-final-preview'),
+                checkIncluirNormalizados: document.getElementById('check-incluir-normalizados'),
+                btnVisualizarRelatorio: document.getElementById('btn-visualizar-relatorio'),
+                displayTotal: document.getElementById('display-total'),
+                displayPendentes: document.getElementById('display-pendentes'),
+                displayNormalizados: document.getElementById('display-normalizados'),
+                btnToggleArquivados: document.getElementById('btn-toggle-arquivados'),
+                gavetaArquivados: document.getElementById('gaveta-arquivados'),
+                kanbanWrapper: document.getElementById('kanban-wrapper'),
+                colunaNormalizados: document.getElementById('coluna-normalizados'),
+                countNormalizadosGaveta: document.getElementById('count-normalizados-gaveta'),
+                modalRelatorio: document.getElementById('modal-relatorio'),
+                modalRelatorioTexto: document.getElementById('modal-relatorio-texto'),
+                btnModalCopiar: document.getElementById('btn-modal-copiar'),
+                btnModalFechar: document.getElementById('btn-modal-fechar'),
+                turnoData: document.getElementById('turno-data'),
+                btnAddOcorrencia: document.getElementById('btn-add-ocorrencia'),
+                turnoOcorrenciasContainer: document.getElementById('turno-ocorrencias-container'),
+                btnGerarRelatorioTurno: document.getElementById('btn-gerar-relatorio-turno'),
+                btnCopiarRelatorioTurno: document.getElementById('btn-copiar-relatorio-turno'),
+                saidaTurno: document.getElementById('saida-turno'),
+                reboqueBrutoInput: document.getElementById('reboque-bruto-input'),
+                btnProcessarReboques: document.getElementById('btn-processar-reboques'),
+                reboquesDisponiveisContainer: document.getElementById('reboques-disponiveis'),
+                reboquesAtuandoContainer: document.getElementById('reboques-atuando'),
+                reboquesCountDisponiveis: document.getElementById('reboques-count-disponiveis'),
+                reboquesCountAtuando: document.getElementById('reboques-count-atuando'),
+                reboquesCountTotal: document.getElementById('reboques-count-total'),
+                btnAddReboquista: document.getElementById('btn-add-reboquista'),
+                btnNovoEvento: document.getElementById('btn-novo-evento'),
+                eventosAbertosContainer: document.getElementById('eventos-abertos'),
+                configAddBtns: {
+                    operadores: document.getElementById('btn-add-operador'),
+                    supervisores: document.getElementById('btn-add-supervisor'),
+                    monitores: document.getElementById('btn-add-monitor'),
+                    locais: document.getElementById('btn-add-local')
+                },
+                configInputs: {
+                    operadores: document.getElementById('input-add-operador'),
+                    supervisores: document.getElementById('input-add-supervisor'),
+                    monitores: document.getElementById('input-add-monitor'),
+                    locais: document.getElementById('input-add-local')
+                },
+                modalAcionamentoReboque: document.getElementById('modal-acionamento-reboque'),
+                reboqueAcionamentoCardId: document.getElementById('reboque-acionamento-card-id'),
+                reboqueEventoTipo: document.getElementById('reboque-evento-tipo'),
+                reboqueEventoEndereco: document.getElementById('reboque-evento-endereco'),
+                reboqueEventoHorario: document.getElementById('reboque-evento-horario'),
+                reboqueEventoObs: document.getElementById('reboque-evento-obs'),
+                btnReboqueAcionamentoCancelar: document.getElementById('btn-reboque-acionamento-cancelar'),
+                btnReboqueAcionamentoConfirmar: document.getElementById('btn-reboque-acionamento-confirmar'),
+                btnReboqueAcionamentoAdicionarOutro: document.getElementById('btn-reboque-acionamento-adicionar-outro'),
+                multiAcionamentoReboquistas: document.getElementById('multi-acionamento-reboquistas'),
+                multiAcionamentoTags: document.getElementById('multi-acionamento-tags'),
+                modalEdicaoReboquista: document.getElementById('modal-edicao-reboquista'),
+                reboqueEditCardId: document.getElementById('reboque-edit-card-id'),
+                reboqueEditNome: document.getElementById('reboque-edit-nome'),
+                reboqueEditVt: document.getElementById('reboque-edit-vt'),
+                reboqueEditPlaca: document.getElementById('reboque-edit-placa'),
+                reboqueEditPlantao: document.getElementById('reboque-edit-plantao'),
+                reboqueEditSmart: document.getElementById('reboque-edit-smart'),
+                btnReboqueEditCancelar: document.getElementById('btn-reboque-edit-cancelar'),
+                btnReboqueEditSalvar: document.getElementById('btn-reboque-edit-salvar'),
+                modalNovoEvento: document.getElementById('modal-novo-evento'),
+                eventoTipo: document.getElementById('evento-tipo'),
+                eventoEndereco: document.getElementById('evento-endereco'),
+                eventoHorario: document.getElementById('evento-horario'),
+                eventoObs: document.getElementById('evento-obs'),
+                btnEventoCriar: document.getElementById('btn-evento-criar'),
+                btnEventoCancelar: document.getElementById('btn-evento-cancelar'),
+                modalEdicao: document.getElementById('modal-edicao'),
+                edicaoCardId: document.getElementById('edicao-card-id'),
+                edicaoCodigo: document.getElementById('edicao-codigo'),
+                edicaoEndereco: document.getElementById('edicao-endereco'),
+                edicaoProblema: document.getElementById('edicao-problema'),
+                btnEdicaoCancelar: document.getElementById('btn-edicao-cancelar'),
+                btnEdicaoSalvar: document.getElementById('btn-edicao-salvar'),
+                modalEdicaoConfig: document.getElementById('modal-edicao-config'),
+                configEditInput: document.getElementById('config-edit-input'),
+                configEditType: document.getElementById('config-edit-type'),
+                configEditIndex: document.getElementById('config-edit-index'),
+                btnConfigEditCancelar: document.getElementById('btn-config-edit-cancelar'),
+                btnConfigEditSalvar: document.getElementById('btn-config-edit-salvar'),
+                modalDespachoSemaforo: document.getElementById('modal-despacho-semaforo'),
+                despachoSemaforoCardId: document.getElementById('despacho-semaforo-card-id'),
+                despachoSemaforoEquipe: document.getElementById('despacho-semaforo-equipe'),
+                despachoSemaforoVt: document.getElementById('despacho-semaforo-vt'),
+                btnDespachoSemaforoConfirmar: document.getElementById('btn-despacho-semaforo-confirmar'),
+                btnDespachoSemaforoCancelar: document.getElementById('btn-despacho-semaforo-cancelar'),
+                modalEdicaoEvento: document.getElementById('modal-edicao-evento'),
+                eventoEditId: document.getElementById('evento-edit-id'),
+                eventoEditTipo: document.getElementById('evento-edit-tipo'),
+                eventoEditEndereco: document.getElementById('evento-edit-endereco'),
+                eventoEditHorario: document.getElementById('evento-edit-horario'),
+                eventoEditObs: document.getElementById('evento-edit-obs'),
+                btnEventoEditSalvar: document.getElementById('btn-evento-edit-salvar'),
+                btnEventoEditCancelar: document.getElementById('btn-evento-edit-cancelar'),
+            };
+            Object.assign(DOM, elements);
+        }
+
+        function inicializarApp() {
+            queryDOM();
+            carregarDadosMestres();
+            
+            const currentTheme = localStorage.getItem('theme') || 'dark';
+            document.body.setAttribute('data-theme', currentTheme);
+
+            const modulos = [Semaforo, Turno, Reboques, Eventos, Config];
+            modulos.forEach(modulo => {
+                try {
+                    if (modulo && typeof modulo.inicializar === 'function') {
+                        modulo.inicializar();
+                    }
+                } catch (error) {
+                    console.error(`Erro ao inicializar o módulo ${modulo.name || 'desconhecido'}:`, error);
+                    showToast(`Falha ao carregar módulo: ${modulo.name || 'desconhecido'}`, 'error');
+                }
+            });
+
+            if (DOM.themeToggle) DOM.themeToggle.addEventListener('click', toggleTheme);
+            if (DOM.btnLimparPainel) DOM.btnLimparPainel.addEventListener('click', limparTudo);
+            if (DOM.tabButtons) DOM.tabButtons.forEach(button => button.addEventListener('click', () => switchTab(button.dataset.tab)));
+            
+            setupModal(DOM.modalRelatorio, DOM.btnModalFechar);
+            setupModal(DOM.modalAcionamentoReboque, DOM.btnReboqueAcionamentoCancelar, Reboques.resetarModalAcionamento);
+            setupModal(DOM.modalEdicaoReboquista, DOM.btnReboqueEditCancelar);
+            setupModal(DOM.modalNovoEvento, DOM.btnEventoCancelar);
+            setupModal(DOM.modalEdicao, DOM.btnEdicaoCancelar);
+            setupModal(DOM.modalEdicaoConfig, DOM.btnConfigEditCancelar);
+            setupModal(DOM.modalDespachoSemaforo, DOM.btnDespachoSemaforoCancelar);
+            setupModal(DOM.modalEdicaoEvento, DOM.btnEventoEditCancelar);
+
+            showToast('Sistema v9.1 carregado com sucesso!', 'success');
+        }
+
+        function switchTab(tabId) {
+            if (!document.getElementById(tabId)) return;
+            DOM.tabContents.forEach(content => content.classList.remove('active'));
+            DOM.tabButtons.forEach(button => button.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            document.querySelector(`.tab-button[data-tab="${tabId}"]`).classList.add('active');
+            localStorage.setItem('activeTab', tabId);
+        }
+
+        function toggleTheme() {
+            let newTheme = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            showToast(`Tema alterado para ${newTheme === 'dark' ? 'escuro' : 'claro'}`, 'info');
+        }
+
+        function limparTudo() {
+            if (confirm("ATENÇÃO: Limpar TODOS os dados? (Ocorrências, Rascunhos e Configurações). Ação irreversível.")) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+
+        function showToast(message, type = 'success', duration = 3000) {
+            if (!DOM.toastContainer) return;
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent
+= message;
+            DOM.toastContainer.appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 100);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => { if (DOM.toastContainer.contains(toast)) { DOM.toastContainer.removeChild(toast); } }, 300);
+            }, duration);
+        }
+
+        function abrirModal(modal) { if(modal) modal.classList.add('visible'); }
+        function fecharModal(modal) { if(modal) modal.classList.remove('visible'); }
+        function setupModal(modal, closeButton, onCancelCallback = null) {
+            if (modal) {
+                modal.addEventListener('click', (e) => { 
+                    if (e.target === modal) {
+                        fecharModal(modal);
+                        if (onCancelCallback) onCancelCallback();
+                    }
+                });
+            }
+            if (closeButton) {
+                closeButton.addEventListener('click', () => {
+                    fecharModal(modal);
+                    if (onCancelCallback) onCancelCallback();
+                });
+            }
+        }
+        
+        function carregarDadosMestres() {
+            const dadosSalvos = localStorage.getItem(AppState.STORAGE_KEY_DADOS);
+            if (dadosSalvos) {
+                try {
+                    const dados = JSON.parse(dadosSalvos);
+                    AppState.dadosMestres.operadores = dados.operadores || [];
+                    AppState.dadosMestres.supervisores = dados.supervisores || [];
+                    AppState.dadosMestres.monitores = dados.monitores || [];
+                    AppState.dadosMestres.locais = dados.locais || [];
+                } catch {
+                    AppState.dadosMestres = { operadores: [], supervisores: [], monitores: [], locais: [] };
+                }
+            } else {
+                AppState.dadosMestres = {
+                    operadores: ["JAIRO LEITE", "THIAGO NOGUEIRA", "MÁRCIO"],
+                    supervisores: ["FRANCISCO HELDER", "MARCOS DANILO"],
+                    monitores: ["JOÃO PAULO ARRUDA", "THAYANE SOARES", "CRISTIANO MIRANDA"],
+                    locais: ["AV. DUQUE DE CAXIAS X AV. TRISTÃO GONÇALVES"]
+                };
+            }
+        }
+
+        const Semaforo = {
+            inicializar() {
+                this.carregarEstado();
+                DOM.btnEdicaoSalvar.addEventListener('click', this.handleSalvarEdicaoClick.bind(this));
+                DOM.btnDespachoSemaforoConfirmar.addEventListener('click', this.handleSalvarDespachoClick.bind(this));
+                DOM.btnProcessar.addEventListener('click', this.handleProcessarClick.bind(this));
+                DOM.btnVisualizarRelatorio.addEventListener('click', this.handleVisualizarRelatorioClick.bind(this));
+                DOM.checkIncluirNormalizados.addEventListener('change', this.handleConfigChange.bind(this));
+                DOM.btnModalCopiar.addEventListener('click', this.handleCopiarModalClick.bind(this));
+                DOM.btnToggleArquivados.addEventListener('click', (e) => { e.stopPropagation(); this.toggleGaveta(); });
+                document.addEventListener('click', (e) => { if (DOM.gavetaArquivados.classList.contains('open') && !DOM.gavetaArquivados.contains(e.target) && !DOM.btnToggleArquivados.contains(e.target)) { this.toggleGaveta(false); } });
+                const kanbanArea = document.querySelector('#tab-semaforo');
+                kanbanArea.addEventListener('dragstart', this.handleDragStart.bind(this));
+                kanbanArea.addEventListener('dragend', this.handleDragEnd.bind(this));
+                kanbanArea.addEventListener('dragover', this.handleDragOver.bind(this));
+                kanbanArea.addEventListener('dragleave', this.handleDragLeave.bind(this));
+                kanbanArea.addEventListener('drop', this.handleDrop.bind(this));
+                kanbanArea.addEventListener('click', this.handleKanbanBoardClick.bind(this));
+            },
+            handleProcessarClick() {
+                const textoBruto = DOM.relatorioBrutoInput.value.trim();
+                if (!textoBruto) { showToast('Insira o relatório bruto para processar.', 'warning'); return; }
+                
+                const linhas = textoBruto.split('\n').filter(linha => linha.trim() !== '');
+                let novosCardsAdicionados = 0;
+
+                linhas.forEach(linha => {
+                    const cardData = this.extrairDadosDoBloco(linha);
+                    if (cardData && !this.cardExiste(cardData.codigo)) {
+                        const cardId = `card-${AppState.cardIdCounter++}`;
+                        const cardElement = this.criarElementoCard(cardId, cardData);
+                        document.querySelector('#coluna-espera .kanban-cards-container').appendChild(cardElement);
+                        novosCardsAdicionados++;
+                    }
+                });
+
+                if (novosCardsAdicionados > 0) {
+                    this.atualizarPainel();
+                    showToast(`${novosCardsAdicionados} ocorrência(s) processada(s)!`, 'success');
+                } else {
+                    showToast('Nenhuma nova ocorrência encontrada ou já existem no painel.', 'info');
+                }
+                DOM.relatorioBrutoInput.value = '';
+            },
+            extrairDadosDoBloco(bloco) {
+                const formatoNovoMatch = bloco.match(/🚦\s*(\d{3,4})\s*🚦\s*(.*?)\s*●\s*(APAGADO|PISCANTE|TRAVADO|INTERMITENTE|N\/I)/i);
+                if (formatoNovoMatch) {
+                    return {
+                        codigo: formatoNovoMatch[1],
+                        endereco: formatoNovoMatch[2].trim().replace(/\s+/g, ' '),
+                        problema: formatoNovoMatch[3].toUpperCase(),
+                        equipe: '', viatura: ''
+                    };
+                }
+
+                const formatoAntigoMatch = bloco.match(/^(\d{3,4})\s*🚦\s*(.*?)\s*●\s*(APAGADO|PISCANTE|TRAVADO|INTERMITENTE|N\/I)/i);
+                if (formatoAntigoMatch) {
+                    return {
+                        codigo: formatoAntigoMatch[1],
+                        endereco: formatoAntigoMatch[2].trim().replace(/\s+/g, ' '),
+                        problema: formatoAntigoMatch[3].toUpperCase(),
+                        equipe: '', viatura: ''
+                    };
+                }
+                
+                return null;
+            },
+            criarElementoCard(cardId, cardData) {
+                const card = document.createElement('div');
+                card.id = cardId;
+                card.className = 'kanban-card';
+                card.draggable = true;
+                Object.keys(cardData).forEach(key => { if (cardData[key] !== undefined) card.dataset[key] = cardData[key]; });
+                
+                const despachoInfoHTML = (cardData.equipe || cardData.viatura) 
+                    ? `<div class="card-despacho-info"><strong>Equipe:</strong> ${cardData.equipe || 'N/I'} | <strong>VT:</strong> ${cardData.viatura || 'N/I'}</div>` 
+                    : '<div class="card-despacho-info" style="display:none;"></div>';
+
+                card.innerHTML = `
+                    <div class="card-header"><strong>${cardData.codigo}</strong><span class="card-status-tag">${cardData.problema}</span></div>
+                    <div class="card-body">${cardData.endereco}</div>
+                    ${despachoInfoHTML}
+                    <div class="card-footer">
+                        <button class="btn-card-action copy-location" title="Copiar Localização (Ctrl+Click para incluir equipe)"><i class="fa-solid fa-location-crosshairs"></i></button>
+                        <button class="btn-card-action edit" title="Editar"><i class="fas fa-pencil-alt"></i></button>
+                        <button class="btn-card-action dispatch" title="Despachar Equipe"><i class="fas fa-paper-plane"></i></button>
+                        <button class="btn-card-action complete" title="Concluir"><i class="fas fa-check-circle"></i></button>
+                    </div>`;
+                return card;
+            },
+            atualizarPainel() {
+                const contadores = {
+                    espera: document.querySelectorAll('#coluna-espera .kanban-card').length,
+                    'sem-necessidade': document.querySelectorAll('#coluna-sem-necessidade .kanban-card').length,
+                    vl: document.querySelectorAll('#coluna-vl .kanban-card').length,
+                    amc: document.querySelectorAll('#coluna-amc .kanban-card').length,
+                    normalizados: DOM.colunaNormalizados.querySelectorAll('.kanban-card').length,
+                };
+                const totalNormalizados = contadores.normalizados;
+                const totalPendentes = Object.values(contadores).reduce((a, b) => a + b, 0) - totalNormalizados;
+                DOM.displayTotal.textContent = totalPendentes + totalNormalizados;
+                DOM.displayPendentes.textContent = totalPendentes;
+                DOM.displayNormalizados.textContent = totalNormalizados;
+                DOM.countNormalizadosGaveta.textContent = totalNormalizados;
+                Object.keys(contadores).forEach(key => {
+                    const elId = `count-${key.replace('_', '-')}`;
+                    const el = document.getElementById(elId);
+                    if (el) el.textContent = contadores[key];
+                });
+                this.gerarPreviewRelatorio();
+                this.salvarEstado();
+            },
+            gerarPreviewRelatorio() {
+                const incluirNormalizados = DOM.checkIncluirNormalizados.checked;
+                const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '.');
+                let texto = `*RELATÓRIO DE ATENDIMENTO SEMAFÓRICO – ${hoje}*\n` +
+                            `*Ocorrências (${DOM.displayTotal.textContent})*\n` +
+                            `*Pendentes (${DOM.displayPendentes.textContent})*\n` +
+                            `*Normalizados (${DOM.displayNormalizados.textContent})*\n\n`;
+                
+                const getCardText = (card) => {
+                    let cardText = `${card.dataset.codigo} 🚦 ${card.dataset.endereco} ● ${card.dataset.problema}`;
+                    if (card.dataset.equipe || card.dataset.viatura) {
+                        cardText += ` (Equipe: ${card.dataset.equipe || 'N/I'}, VT: ${card.dataset.viatura || 'N/I'})`;
+                    }
+                    return cardText;
+                };
+
+                const secoes = {
+                    '*ATENDIDOS PELO VIA LIVRE (EM ANDAMENTO):*': Array.from(document.querySelectorAll('#coluna-vl .kanban-card')).map(getCardText),
+                    '*ATENDIDOS PELA AMC (EM ANDAMENTO):*': Array.from(document.querySelectorAll('#coluna-amc .kanban-card')).map(getCardText),
+                };
+                Object.entries(secoes).forEach(([titulo, itens]) => {
+                    if (itens.length > 0) texto += `${titulo}\n${itens.join('\n')}\n\n`;
+                });
+                const aguardandoTecnica = Array.from(document.querySelectorAll('#coluna-espera .kanban-card')).map(getCardText);
+                const semNecessidade = Array.from(document.querySelectorAll('#coluna-sem-necessidade .kanban-card')).map(getCardText);
+                if (aguardandoTecnica.length > 0 || semNecessidade.length > 0) {
+                    texto += `*PENDENTES / OUTROS MOTIVOS*\n`;
+                    if (aguardandoTecnica.length > 0) texto += `*- - Aguardando atendimento:*\n${aguardandoTecnica.join('\n')}\n`;
+                    if (semNecessidade.length > 0) texto += `\n*- - Sem necessidade de operação:*\n${semNecessidade.join('\n')}\n`;
+                }
+                if (incluirNormalizados) {
+                    const normalizados = Array.from(DOM.colunaNormalizados.querySelectorAll('.kanban-card')).map(getCardText);
+                    if (normalizados.length > 0) texto += `\n*NORMALIZADOS:*\n${normalizados.join('\n')}\n`;
+                }
+                DOM.relatorioFinalPreview.value = texto.trim();
+                return DOM.relatorioFinalPreview.value;
+            },
+            salvarEstado() {
+                const estado = { colunas: {}, cards: {}, config: { incluirNormalizados: DOM.checkIncluirNormalizados.checked, cardIdCounter: AppState.cardIdCounter } };
+                document.querySelectorAll('.kanban-column .kanban-cards-container, #gaveta-arquivados .kanban-cards-container').forEach(container => {
+                    const colunaId = container.closest('.kanban-column, #gaveta-arquivados').id;
+                    estado.colunas[colunaId] = Array.from(container.querySelectorAll('.kanban-card')).map(card => card.id);
+                });
+                document.querySelectorAll('#tab-semaforo .kanban-card').forEach(card => {
+                    estado.cards[card.id] = { ...card.dataset };
+                });
+                localStorage.setItem(AppState.STORAGE_KEY_SEMAFORO, JSON.stringify(estado));
+            },
+            carregarEstado() {
+                const estadoSalvo = localStorage.getItem(AppState.STORAGE_KEY_SEMAFORO);
+                if (!estadoSalvo) { this.atualizarPainel(); return; }
+                const estado = JSON.parse(estadoSalvo);
+                document.querySelectorAll('#tab-semaforo .kanban-cards-container').forEach(c => c.innerHTML = '');
+                if (estado.cards && estado.colunas) {
+                    Object.keys(estado.colunas).forEach(colunaId => {
+                        const containerParent = document.getElementById(colunaId);
+                        if (containerParent) {
+                            const cardContainer = containerParent.querySelector('.kanban-cards-container') || containerParent;
+                            estado.colunas[colunaId].forEach(cardId => {
+                                const cardData = estado.cards[cardId];
+                                if (cardData) {
+                                    const cardElement = this.criarElementoCard(cardId, cardData);
+                                    cardContainer.appendChild(cardElement);
+                                }
+                            });
+                        }
+                    });
+                }
+                AppState.cardIdCounter = estado.config?.cardIdCounter || 0;
+                DOM.checkIncluirNormalizados.checked = estado.config?.incluirNormalizados || false;
+                this.atualizarPainel();
+            },
+            handleVisualizarRelatorioClick() { const textoRelatorio = this.gerarPreviewRelatorio(); DOM.modalRelatorioTexto.value = textoRelatorio; abrirModal(DOM.modalRelatorio); },
+            handleCopiarModalClick() { navigator.clipboard.writeText(DOM.modalRelatorioTexto.value).then(() => { fecharModal(DOM.modalRelatorio); showToast('Relatório copiado!', 'success'); }); },
+            handleConfigChange() { this.gerarPreviewRelatorio(); this.salvarEstado(); },
+            
+            handleKanbanBoardClick(e) {
+                const cardElement = e.target.closest('.kanban-card');
+                if (!cardElement) return;
+
+                if (e.target.closest('.btn-card-action.dispatch')) {
+                    this.abrirModalDespacho(cardElement.id);
+                } else if (e.target.closest('.btn-card-action.edit')) {
+                    this.abrirModalEdicao(cardElement.id);
+                } else if (e.target.closest('.btn-card-action.complete')) {
+                    this.handleNormalizarClick(cardElement);
+                } else if (e.target.closest('.btn-card-action.copy-location')) {
+                    this.copiarLocalizacao(cardElement, e.ctrlKey);
+                }
+            },
+
+            copiarLocalizacao(card, comEquipe) {
+                let texto = `*${card.dataset.endereco}*`;
+                if (comEquipe && (card.dataset.equipe || card.dataset.viatura)) {
+                    texto += `\nEquipe: ${card.dataset.equipe || 'N/I'}, VT: ${card.dataset.viatura || 'N/I'}`;
+                }
+                navigator.clipboard.writeText(texto).then(() => {
+                    showToast('Localização copiada!', 'success');
+                });
+            },
+
+            abrirModalDespacho(cardId) {
+                const card = document.getElementById(cardId);
+                if (!card) return;
+                DOM.despachoSemaforoCardId.value = cardId;
+                DOM.despachoSemaforoEquipe.value = card.dataset.equipe || '';
+                DOM.despachoSemaforoVt.value = card.dataset.viatura || '';
+                abrirModal(DOM.modalDespachoSemaforo);
+            },
+
+            handleSalvarDespachoClick() {
+                const cardId = DOM.despachoSemaforoCardId.value;
+                const card = document.getElementById(cardId);
+                if (!card) return;
+
+                const equipe = DOM.despachoSemaforoEquipe.value.trim().toUpperCase();
+                const vt = DOM.despachoSemaforoVt.value.trim().toUpperCase();
+
+                card.dataset.equipe = equipe;
+                card.dataset.viatura = vt;
+
+                const despachoInfoDiv = card.querySelector('.card-despacho-info');
+                if (equipe || vt) {
+                    despachoInfoDiv.innerHTML = `<strong>Equipe:</strong> ${equipe || 'N/I'} | <strong>VT:</strong> ${vt || 'N/I'}`;
+                    despachoInfoDiv.style.display = 'block';
+                } else {
+                    despachoInfoDiv.style.display = 'none';
+                }
+
+                fecharModal(DOM.modalDespachoSemaforo);
+                this.atualizarPainel();
+                showToast('Despacho salvo!', 'success');
+            },
+
+            handleNormalizarClick(cardElement) {
+                DOM.colunaNormalizados.appendChild(cardElement);
+                this.atualizarPainel();
+                showToast(`Ocorrência ${cardElement.dataset.codigo} normalizada!`, 'success');
+            },
+            abrirModalEdicao(cardId) {
+                const card = document.getElementById(cardId);
+                if (!card) return;
+                DOM.edicaoCardId.value = cardId;
+                DOM.edicaoCodigo.value = card.dataset.codigo;
+                DOM.edicaoEndereco.value = card.dataset.endereco;
+                DOM.edicaoProblema.value = card.dataset.problema;
+                abrirModal(DOM.modalEdicao);
+            },
+            handleSalvarEdicaoClick() {
+                const cardId = DOM.edicaoCardId.value;
+                const card = document.getElementById(cardId);
+                if (!card) return;
+                const novoEndereco = DOM.edicaoEndereco.value.trim();
+                if (!novoEndereco) { showToast('Endereço não pode ser vazio.', 'error'); return; }
+                card.dataset.endereco = novoEndereco;
+                card.dataset.problema = DOM.edicaoProblema.value;
+                card.querySelector('.card-body').textContent = novoEndereco;
+                card.querySelector('.card-status-tag').textContent = DOM.edicaoProblema.value;
+                fecharModal(DOM.modalEdicao);
+                this.atualizarPainel();
+                showToast('Ocorrência editada!', 'success');
+            },
+            toggleGaveta(forceState) {
+                const shouldBeOpen = forceState !== undefined ? forceState : !DOM.gavetaArquivados.classList.contains('open');
+                DOM.gavetaArquivados.classList.toggle('open', shouldBeOpen);
+                DOM.kanbanWrapper.classList.toggle('gaveta-open', shouldBeOpen);
+            },
+            cardExiste: (codigo) => document.querySelector(`#tab-semaforo .kanban-card[data-codigo='${codigo}']`) !== null,
+            handleDragStart(e) { if (e.target.classList.contains('kanban-card')) { AppState.draggedCard = e.target; AppState.placeholder = document.createElement('div'); AppState.placeholder.className = 'drag-placeholder'; AppState.placeholder.style.height = `${e.target.offsetHeight}px`; setTimeout(() => e.target.classList.add('dragging'), 0); } },
+            handleDragEnd(e) { if(AppState.draggedCard) { AppState.draggedCard.classList.remove('dragging'); } if(AppState.placeholder && AppState.placeholder.parentNode) { AppState.placeholder.parentNode.removeChild(AppState.placeholder); } AppState.draggedCard = null; AppState.placeholder = null; document.querySelectorAll('.kanban-cards-container.drag-over').forEach(c => c.classList.remove('drag-over')); },
+            handleDragOver(e) { e.preventDefault(); const container = e.target.closest('.kanban-cards-container'); if (container && AppState.draggedCard && AppState.draggedCard.classList.contains('kanban-card')) { container.classList.add('drag-over'); const afterElement = this.getDragAfterElement(container, e.clientY); if (afterElement == null) { container.appendChild(AppState.placeholder); } else { container.insertBefore(AppState.placeholder, afterElement); } } },
+            getDragAfterElement(container, y) { const draggableElements = [...container.querySelectorAll('.kanban-card:not(.dragging)')]; return draggableElements.reduce((closest, child) => { const box = child.getBoundingClientRect(); const offset = y - box.top - box.height / 2; if (offset < 0 && offset > closest.offset) { return { offset: offset, element: child }; } else { return closest; } }, { offset: Number.NEGATIVE_INFINITY }).element; },
+            handleDragLeave(e) { const container = e.target.closest('.kanban-cards-container'); if(container) container.classList.remove('drag-over'); },
+            handleDrop(e) { e.preventDefault(); const destinoContainer = e.target.closest('.kanban-cards-container'); if (destinoContainer && AppState.draggedCard && AppState.draggedCard.classList.contains('kanban-card')) { if (AppState.placeholder && AppState.placeholder.parentNode) { AppState.placeholder.parentNode.replaceChild(AppState.draggedCard, AppState.placeholder); } else { destinoContainer.appendChild(AppState.draggedCard); } this.atualizarPainel(); showToast('Card movido!', 'success'); } if(destinoContainer) destinoContainer.classList.remove('drag-over'); },
+        };
+
+        const Turno = {
+            inicializar() {
+                DOM.turnoData.valueAsDate = new Date();
+                DOM.btnAddOcorrencia.addEventListener('click', () => this.adicionarOcorrencia());
+                DOM.btnGerarRelatorioTurno.addEventListener('click', this.gerarRelatorio.bind(this));
+                DOM.btnCopiarRelatorioTurno.addEventListener('click', this.copiarRelatorio.bind(this));
+                DOM.turnoOcorrenciasContainer.addEventListener('click', (e) => {
+                    if (e.target.closest('.btn-remover')) {
+                        e.target.closest('.item-dinamico').remove();
+                        this.salvarRascunho();
+                    }
+                });
+                document.querySelector('#tab-turno').addEventListener('input', () => this.salvarRascunho());
+                this.carregarRascunho();
+            },
+            adicionarOcorrencia(data = {}) {
+                const item = document.createElement('div');
+                item.className = 'item-dinamico';
+                item.innerHTML = `
+                    <button type="button" class="btn-remover"><i class="fas fa-times"></i></button>
+                    <div class="form-grid">
+                        <div class="form-group"><label>QRU:</label><input type="text" class="turno-qru" value="${data.qru || ''}"></div>
+                        <div class="form-group"><label>QTH:</label><input type="text" class="turno-qth" list="lista-locais-datalist" value="${data.qth || ''}"></div>
+                        <div class="form-group"><label>VT:</label><input type="text" class="turno-vt" value="${data.vt || ''}"></div>
+                        <div class="form-group"><label>Equipe:</label><input type="text" class="turno-equipe" list="lista-operadores-datalist" value="${data.equipe || ''}"></div>
+                    </div>`;
+                DOM.turnoOcorrenciasContainer.appendChild(item);
+            },
+            gerarRelatorio() {
+                const get = id => document.getElementById(id)?.value.trim().toUpperCase();
+                const dataInput = document.getElementById("turno-data").value;
+                const dataBr = dataInput ? new Date(dataInput + 'T00:00:00').toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR');
+                let texto = '';
+                const camposCabecalho = [
+                    { id: 'turno-turno', label: 'TURNO' },
+                    { id: 'turno-data', label: 'DATA', value: dataBr },
+                    { id: 'turno-totalAgentes', label: 'TOTAL AGENTES' },
+                    { id: 'turno-monitor', label: 'CENTRAL' },
+                    { id: 'turno-supervisor', label: 'SUPERVISÃO' },
+                    { id: 'turno-vlvt', label: 'VLVT' }
+                ];
+                camposCabecalho.forEach(campo => {
+                    const valor = campo.value || get(campo.id);
+                    if (valor) {
+                        texto += `*${campo.label}:* ${valor}\n`;
+                    }
+                });
+                document.querySelectorAll('#turno-ocorrencias-container .item-dinamico').forEach(item => {
+                    const qru = item.querySelector('.turno-qru')?.value.trim().toUpperCase();
+                    const qth = item.querySelector('.turno-qth')?.value.trim().toUpperCase();
+                    const vt = item.querySelector('.turno-vt')?.value.trim().toUpperCase();
+                    const equipe = item.querySelector('.turno-equipe')?.value.trim().toUpperCase();
+                    if (qru || qth || vt || equipe) {
+                        texto += `\n`;
+                        if (qru) texto += `*QRU:* ${qru}\n`;
+                        if (qth) texto += `*QTH:* ${qth}\n`;
+                        if (vt) texto += `*VT:* ${vt}\n`;
+                        if (equipe) texto += `*EQUIPE:* ${equipe}\n`;
+                    }
+                });
+                DOM.saidaTurno.value = texto.trim();
+                showToast('Relatório de turno gerado!', 'success');
+                return texto;
+            },
+            copiarRelatorio() {
+                if (!DOM.saidaTurno.value) {
+                    showToast('Gere o relatório antes de copiar.', 'warning');
+                    return;
+                }
+                navigator.clipboard.writeText(DOM.saidaTurno.value).then(() => {
+                    showToast('Relatório de turno copiado!', 'success');
+                });
+            },
+            salvarRascunho() {
+                const rascunho = {
+                    cabecalho: {},
+                    ocorrencias: []
+                };
+                document.querySelectorAll('#tab-turno .painel:first-child .form-grid input, #tab-turno .painel:first-child .form-grid select').forEach(input => {
+                    if (input.id) rascunho.cabecalho[input.id] = input.value;
+                });
+                document.querySelectorAll('#turno-ocorrencias-container .item-dinamico').forEach(item => {
+                    rascunho.ocorrencias.push({
+                        qru: item.querySelector('.turno-qru')?.value || '',
+                        qth: item.querySelector('.turno-qth')?.value || '',
+                        vt: item.querySelector('.turno-vt')?.value || '',
+                        equipe: item.querySelector('.turno-equipe')?.value || ''
+                    });
+                });
+                localStorage.setItem(AppState.STORAGE_KEY_TURNO, JSON.stringify(rascunho));
+            },
+            carregarRascunho() {
+                const rascunhoSalvo = localStorage.getItem(AppState.STORAGE_KEY_TURNO);
+                if (!rascunhoSalvo) return;
+                const rascunho = JSON.parse(rascunhoSalvo);
+                if (rascunho.cabecalho) {
+                    Object.keys(rascunho.cabecalho).forEach(id => {
+                        const input = document.getElementById(id);
+                        if (input) input.value = rascunho.cabecalho[id];
+                    });
+                }
+                if (rascunho.ocorrencias) {
+                    DOM.turnoOcorrenciasContainer.innerHTML = '';
+                    rascunho.ocorrencias.forEach(ocorrencia => this.adicionarOcorrencia(ocorrencia));
+                }
+            }
+        };
+
+        const Reboques = {
+            inicializar() {
+                this.carregarEstado();
+                DOM.btnProcessarReboques.addEventListener('click', this.handleProcessarClick.bind(this));
+                DOM.btnAddReboquista.addEventListener('click', () => this.abrirModalEdicao());
+                DOM.btnReboqueAcionamentoConfirmar.addEventListener('click', this.handleFinalizarAcionamentoMultiplo.bind(this));
+                DOM.btnReboqueAcionamentoAdicionarOutro.addEventListener('click', this.handleAdicionarOutroReboque.bind(this));
+                DOM.btnReboqueEditSalvar.addEventListener('click', this.handleSalvarEdicao.bind(this));
+                const reboquesArea = document.querySelector('#tab-reboques');
+                reboquesArea.addEventListener('click', this.handleCardClick.bind(this));
+                reboquesArea.addEventListener('dragstart', this.handleDragStart.bind(this));
+                reboquesArea.addEventListener('dragend', this.handleDragEnd.bind(this));
+                reboquesArea.addEventListener('dragover', this.handleDragOver.bind(this));
+                reboquesArea.addEventListener('drop', this.handleDrop.bind(this));
+            },
+            handleProcessarClick() {
+                const textoBruto = DOM.reboqueBrutoInput.value.trim();
+                if (!textoBruto) { showToast('Insira a lista de reboquistas para processar.', 'warning'); return; }
+                
+                const blocos = textoBruto.split(/\n\s*\n/).filter(bloco => bloco.trim() !== '');
+                let novosReboquistasAdicionados = 0;
+
+                blocos.forEach(bloco => {
+                    const cardData = this.extrairDadosDoBlocoReboque(bloco);
+                    if (cardData && cardData.nome && !this.cardExiste(cardData.nome)) {
+                        cardData.status = 'disponivel';
+                        cardData.ocorrencia = '';
+                        this.adicionarReboquista(cardData);
+                        novosReboquistasAdicionados++;
+                    }
+                });
+
+                if (novosReboquistasAdicionados > 0) {
+                    showToast(`${novosReboquistasAdicionados} reboquista(s) processado(s)!`, 'success');
+                } else {
+                    showToast('Nenhum novo reboquista encontrado ou já existem no painel.', 'info');
+                }
+                DOM.reboqueBrutoInput.value = '';
+            },
+            extrairDadosDoBlocoReboque(bloco) {
+                const linhas = bloco.split('\n').map(linha => linha.trim()).filter(linha => linha !== '');
+                if (linhas.length === 0) return null;
+
+                const hasKeywords = /VT|Plantão|Smart/i.test(bloco);
+                if (!hasKeywords) return null;
+
+                const data = { nome: '', vt: 'N/I', placa: 'N/I', plantao: 'N/I', smart: 'N/I' };
+                
+                const linhaNome = linhas.find(linha => {
+                    const temVT = /VT\s+\d+/i.test(linha);
+                    const temEmoji = /🚨/.test(linha);
+                    const temPlantao = /Plantão/i.test(linha);
+                    const temSmart = /Smart/i.test(linha);
+                    const temVistoriador = /VISTORIADOR/i.test(linha);
+                    const temAssumirHoras = /ASSUMIR.*HORAS/i.test(linha);
+                    
+                    return !temVT && !temEmoji && !temPlantao && !temSmart && !temVistoriador && !temAssumirHoras && linha.length > 2;
+                });
+                
+                if (!linhaNome) return null;
+                data.nome = linhaNome.trim().toUpperCase();
+
+                linhas.forEach(linha => {
+                    const plantaoMatch = linha.match(/Plantão até\s+(?:às\s+)?([\d:]+\s*hs?r?s?)/i);
+                    if (plantaoMatch) data.plantao = plantaoMatch[1].trim();
+
+                    const smartMatch = linha.match(/Smart:\s*\(?(\d{2})\)?\s*([\d\s.-]+)/i);
+                    if (smartMatch) data.smart = `(${smartMatch[1]}) ${smartMatch[2].trim()}`;
+
+                    const vtPlacaMatch = linha.match(/VT\s+([\w\d]+)\s*🚨?\s*([A-Z0-9]+)?/i);
+                    if (vtPlacaMatch) {
+                        data.vt = vtPlacaMatch[1] ? vtPlacaMatch[1].trim() : 'N/I';
+                        data.placa = vtPlacaMatch[2] ? vtPlacaMatch[2].trim().replace(/\s/g, '') : 'N/I';
+                    }
+                });
+                return data;
+            },
+            adicionarReboquista(cardData) {
+                const cardId = `reboque-${AppState.reboqueIdCounter++}`;
+                const cardElement = this.criarCardReboque(cardId, cardData);
+                DOM.reboquesDisponiveisContainer.appendChild(cardElement);
+                this.atualizarPainel();
+            },
+            criarCardReboque(cardId, cardData) {
+                const card = document.createElement('div');
+                card.id = cardId;
+                card.className = 'reboque-card';
+                card.draggable = true;
+                Object.keys(cardData).forEach(key => { if (cardData[key] !== undefined) card.dataset[key] = cardData[key]; });
+                const ocorrenciaInfoHTML = cardData.ocorrencia ? `<div class="reboque-ocorrencia-info" title="${cardData.ocorrencia}"><i class="fas fa-info-circle"></i> ${cardData.ocorrencia}</div>` : '';
+                let footerButtons = '';
+                if (cardData.status === 'disponivel') {
+                    footerButtons = `<button class="btn-card-action acionamento" title="Acionar Reboque"><i class="fas fa-sign-out-alt"></i></button>`;
+                } else {
+                    footerButtons = `
+                        <button class="btn-card-action finalizar-acionamento" title="Finalizar Atendimento"><i class="fas fa-check-circle" style="color: var(--color-success);"></i></button>
+                    `;
+                }
+                card.innerHTML = `
+                    <div class="reboque-card-header">
+                        <strong>${cardData.nome || 'N/I'}</strong>
+                        <span class="status-tag ${cardData.status}">${cardData.status}</span>
+                    </div>
+                    <div>
+                        <div class="info-line"><i class="fas fa-truck"></i> VT ${cardData.vt || 'N/I'} / ${cardData.placa || 'N/I'}</div>
+                        <div class="info-line"><i class="far fa-clock"></i> Plantão até ${cardData.plantao || 'N/I'}</div>
+                        <div class="info-line"><i class="fas fa-mobile-alt"></i> ${cardData.smart || 'N/I'}</div>
+                    </div>
+                    ${ocorrenciaInfoHTML}
+                    <div class="reboque-card-footer">
+                        <button class="btn-card-action edit-reboquista" title="Editar Reboquista"><i class="fas fa-user-edit"></i></button>
+                        <button class="btn-card-action remover-reboquista" title="Remover Reboquista"><i class="fas fa-trash-alt" style="color: var(--color-danger);"></i></button>
+                        <div style="flex-grow: 1;"></div>
+                        ${footerButtons}
+                    </div>
+                `;
+                return card;
+            },
+            atualizarPainel() {
+                const disponiveis = DOM.reboquesDisponiveisContainer.querySelectorAll('.reboque-card').length;
+                const atuando = DOM.reboquesAtuandoContainer.querySelectorAll('.reboque-card').length;
+                DOM.reboquesCountDisponiveis.textContent = disponiveis;
+                DOM.reboquesCountAtuando.textContent = atuando;
+                DOM.reboquesCountTotal.textContent = disponiveis + atuando;
+                this.salvarEstado();
+            },
+            handleCardClick(e) {
+                const cardElement = e.target.closest('.reboque-card');
+                if (!cardElement) return;
+                if (e.target.closest('.acionamento')) this.abrirModalAcionamento(cardElement);
+                else if (e.target.closest('.finalizar-acionamento')) this.finalizarAcionamento(cardElement);
+                else if (e.target.closest('.edit-reboquista')) this.abrirModalEdicao(cardElement.id);
+                else if (e.target.closest('.remover-reboquista')) this.removerReboquista(cardElement);
+            },
+            abrirModalAcionamento(reboquistaCard) {
+                if (reboquistaCard.dataset.status === 'atuando') {
+                    showToast(`${reboquistaCard.dataset.nome} já está em atendimento.`, 'error');
+                    return;
+                }
+                this.resetarModalAcionamento();
+                AppState.multiAcionamentoState.reboquistas.push(reboquistaCard);
+                this.atualizarTagsAcionamento();
+                DOM.multiAcionamentoReboquistas.style.display = 'block';
+                abrirModal(DOM.modalAcionamentoReboque);
+            },
+            resetarModalAcionamento() {
+                AppState.multiAcionamentoState.reboquistas.forEach(card => card.classList.remove('dragging'));
+                AppState.multiAcionamentoState = { reboquistas: [], eventoData: null, eventoCard: null };
+                DOM.reboqueEventoTipo.value = '';
+                DOM.reboqueEventoEndereco.value = '';
+                DOM.reboqueEventoHorario.value = '';
+                DOM.reboqueEventoObs.value = '';
+                DOM.multiAcionamentoTags.innerHTML = '';
+                DOM.multiAcionamentoReboquistas.style.display = 'none';
+                DOM.reboqueEventoTipo.disabled = false;
+                DOM.reboqueEventoEndereco.disabled = false;
+                DOM.reboqueEventoHorario.disabled = false;
+                DOM.reboqueEventoObs.disabled = false;
+            },
+            atualizarTagsAcionamento() {
+                DOM.multiAcionamentoTags.innerHTML = AppState.multiAcionamentoState.reboquistas
+                    .map(card => `<span class="evento-reboquista-tag">${card.dataset.nome}</span>`)
+                    .join('');
+            },
+            handleAdicionarOutroReboque() {
+                if (AppState.multiAcionamentoState.reboquistas.length === 0) {
+                    showToast('Acione o primeiro reboquista antes de adicionar outros.', 'warning');
+                    return;
+                }
+                
+                const eventoData = {
+                    tipo: DOM.reboqueEventoTipo.value.trim().toUpperCase(),
+                    endereco: DOM.reboqueEventoEndereco.value.trim().toUpperCase(),
+                    horario: DOM.reboqueEventoHorario.value,
+                    obs: DOM.reboqueEventoObs.value.trim(),
+                };
+
+                if (!eventoData.tipo || !eventoData.endereco) {
+                    showToast('Tipo de Evento e Endereço são obrigatórios.', 'warning');
+                    return;
+                }
+                
+                AppState.multiAcionamentoState.eventoData = eventoData;
+                DOM.reboqueEventoTipo.disabled = true;
+                DOM.reboqueEventoEndereco.disabled = true;
+                DOM.reboqueEventoHorario.disabled = true;
+                DOM.reboqueEventoObs.disabled = true;
+
+                showToast('Arraste outro reboquista para a área de tags ou finalize o acionamento.', 'info');
+            },
+            handleFinalizarAcionamentoMultiplo() {
+                const { reboquistas, eventoData } = AppState.multiAcionamentoState;
+                if (reboquistas.length === 0) {
+                    showToast('Nenhum reboquista foi acionado.', 'error');
+                    return;
+                }
+
+                const finalEventoData = eventoData || {
+                    tipo: DOM.reboqueEventoTipo.value.trim().toUpperCase(),
+                    endereco: DOM.reboqueEventoEndereco.value.trim().toUpperCase(),
+                    horario: DOM.reboqueEventoHorario.value,
+                    obs: DOM.reboqueEventoObs.value.trim(),
+                };
+
+                if (!finalEventoData.tipo || !finalEventoData.endereco) {
+                    showToast('Tipo de Evento e Endereço são obrigatórios.', 'warning');
+                    return;
+                }
+
+                finalEventoData.criado = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                finalEventoData.reboquistas = [];
+
+                const eventoCard = Eventos.adicionarEvento(finalEventoData);
+                
+                reboquistas.forEach(reboquistaCard => {
+                    Eventos.alocarReboquistaAoEvento(reboquistaCard, eventoCard, true);
+                });
+
+                const nomes = reboquistas.map(r => r.dataset.nome).join(', ');
+                let mensagem = `*${finalEventoData.tipo}* enviado para: *${nomes}*\n` +
+                               `*Endereço:* ${finalEventoData.endereco}`;
+                if (finalEventoData.horario) mensagem += `\n*Horário:* ${finalEventoData.horario}`;
+
+                navigator.clipboard.writeText(mensagem).then(() => {
+                    showToast('Mensagem de acionamento múltiplo copiada!', 'success');
+                });
+
+                fecharModal(DOM.modalAcionamentoReboque);
+                this.resetarModalAcionamento();
+            },
+            finalizarAcionamento(card) {
+                const nomeReboquista = card.dataset.nome;
+                Eventos.desalocarReboquistaDeEvento(nomeReboquista);
+
+                card.dataset.status = 'disponivel';
+                card.dataset.ocorrencia = '';
+                this.atualizarCard(card);
+                DOM.reboquesDisponiveisContainer.appendChild(card);
+                this.atualizarPainel();
+                showToast(`${nomeReboquista} está disponível.`, 'info');
+            },
+            removerReboquista(card) {
+                if (confirm(`Tem certeza que deseja remover o reboquista ${card.dataset.nome}?`)) {
+                    if(card.dataset.status === 'atuando') {
+                        Eventos.desalocarReboquistaDeEvento(card.dataset.nome);
+                    }
+                    card.remove();
+                    this.atualizarPainel();
+                    showToast('Reboquista removido.', 'success');
+                }
+            },
+            abrirModalEdicao(cardId) {
+                if (!cardId) {
+                    DOM.reboqueEditCardId.value = '';
+                    DOM.reboqueEditNome.value = '';
+                    DOM.reboqueEditVt.value = '';
+                    DOM.reboqueEditPlaca.value = '';
+                    DOM.reboqueEditPlantao.value = '';
+                    DOM.reboqueEditSmart.value = '';
+                } else {
+                    const card = document.getElementById(cardId);
+                    DOM.reboqueEditCardId.value = cardId;
+                    DOM.reboqueEditNome.value = card.dataset.nome;
+                    DOM.reboqueEditVt.value = card.dataset.vt;
+                    DOM.reboqueEditPlaca.value = card.dataset.placa;
+                    DOM.reboqueEditPlantao.value = card.dataset.plantao;
+                    DOM.reboqueEditSmart.value = card.dataset.smart;
+                }
+                abrirModal(DOM.modalEdicaoReboquista);
+            },
+            handleSalvarEdicao() {
+                const cardId = DOM.reboqueEditCardId.value;
+                const cardData = {
+                    nome: DOM.reboqueEditNome.value.trim().toUpperCase(),
+                    vt: DOM.reboqueEditVt.value.trim(),
+                    placa: DOM.reboqueEditPlaca.value.trim().toUpperCase(),
+                    plantao: DOM.reboqueEditPlantao.value.trim(),
+                    smart: DOM.reboqueEditSmart.value.trim(),
+                };
+                if (!cardData.nome) { showToast('O nome do reboquista é obrigatório.', 'error'); return; }
+                if (cardId) {
+                    const card = document.getElementById(cardId);
+                    const nomeAntigo = card.dataset.nome;
+                    if (nomeAntigo !== cardData.nome) {
+                        Eventos.renomearReboquistaEmEventos(nomeAntigo, cardData.nome);
+                    }
+                    Object.assign(card.dataset, cardData);
+                    this.atualizarCard(card);
+                    showToast('Dados do reboquista atualizados!', 'success');
+                } else {
+                    if (this.cardExiste(cardData.nome)) { showToast('Um reboquista com este nome já existe.', 'error'); return; }
+                    cardData.status = 'disponivel';
+                    cardData.ocorrencia = '';
+                    this.adicionarReboquista(cardData);
+                    showToast('Reboquista adicionado com sucesso!', 'success');
+                }
+                this.salvarEstado();
+                fecharModal(DOM.modalEdicaoReboquista);
+            },
+            atualizarCard(card) {
+                const cardData = { ...card.dataset };
+                const novoCardHTML = this.criarCardReboque(card.id, cardData).innerHTML;
+                card.innerHTML = novoCardHTML;
+            },
+            salvarEstado() {
+                const estado = { colunas: {}, cards: {}, config: { reboqueIdCounter: AppState.reboqueIdCounter } };
+                estado.colunas.disponiveis = Array.from(DOM.reboquesDisponiveisContainer.querySelectorAll('.reboque-card')).map(c => c.id);
+                estado.colunas.atuando = Array.from(DOM.reboquesAtuandoContainer.querySelectorAll('.reboque-card')).map(c => c.id);
+                document.querySelectorAll('#tab-reboques .reboque-card').forEach(card => { estado.cards[card.id] = { ...card.dataset }; });
+                localStorage.setItem(AppState.STORAGE_KEY_REBOQUES, JSON.stringify(estado));
+            },
+            carregarEstado() {
+                const estadoSalvo = localStorage.getItem(AppState.STORAGE_KEY_REBOQUES);
+                if (!estadoSalvo) { this.atualizarPainel(); return; }
+                const estado = JSON.parse(estadoSalvo);
+                DOM.reboquesDisponiveisContainer.innerHTML = '';
+                DOM.reboquesAtuandoContainer.innerHTML = '';
+                if (estado.cards && estado.colunas) {
+                    (estado.colunas.disponiveis || []).forEach(cardId => {
+                        const cardData = estado.cards[cardId];
+                        if (cardData) DOM.reboquesDisponiveisContainer.appendChild(this.criarCardReboque(cardId, cardData));
+                    });
+                    (estado.colunas.atuando || []).forEach(cardId => {
+                        const cardData = estado.cards[cardId];
+                        if (cardData) DOM.reboquesAtuandoContainer.appendChild(this.criarCardReboque(cardId, cardData));
+                    });
+                }
+                AppState.reboqueIdCounter = estado.config?.reboqueIdCounter || 0;
+                this.atualizarPainel();
+            },
+            cardExiste: (nome) => document.querySelector(`#tab-reboques .reboque-card[data-nome="${nome}"]`) !== null,
+            handleDragStart(e) { if (e.target.classList.contains('reboque-card')) { AppState.draggedCard = e.target; setTimeout(() => e.target.classList.add('dragging'), 0); } },
+            handleDragEnd(e) { if (AppState.draggedCard) { AppState.draggedCard.classList.remove('dragging'); AppState.draggedCard = null; } },
+            handleDragOver(e) { e.preventDefault(); },
+            handleDrop(e) {
+                e.preventDefault();
+                if (!AppState.draggedCard) return;
+
+                const dropTarget = e.target;
+                
+                if (DOM.modalAcionamentoReboque.classList.contains('visible') && dropTarget.closest('#multi-acionamento-reboquistas')) {
+                    const reboquistaCard = AppState.draggedCard;
+                    if (reboquistaCard.dataset.status === 'atuando') {
+                        showToast(`${reboquistaCard.dataset.nome} já está em atendimento.`, 'error');
+                        return;
+                    }
+                    if (!AppState.multiAcionamentoState.reboquistas.find(r => r.id === reboquistaCard.id)) {
+                        AppState.multiAcionamentoState.reboquistas.push(reboquistaCard);
+                        this.atualizarTagsAcionamento();
+                        showToast(`${reboquistaCard.dataset.nome} adicionado ao acionamento.`, 'info');
+                    }
+                } else if (dropTarget.closest('.evento-card')) {
+                    Eventos.alocarReboquistaAoEvento(AppState.draggedCard, dropTarget.closest('.evento-card'));
+                }
+            },
+        };
+
+        const Eventos = {
+            inicializar() {
+                this.carregarEstado();
+                DOM.btnNovoEvento.addEventListener('click', () => abrirModal(DOM.modalNovoEvento));
+                DOM.btnEventoCriar.addEventListener('click', this.handleCriarEvento.bind(this));
+                DOM.btnEventoEditSalvar.addEventListener('click', this.handleSalvarEdicaoEvento.bind(this));
+                DOM.eventosAbertosContainer.addEventListener('click', this.handleEventoClick.bind(this));
+                DOM.eventosAbertosContainer.addEventListener('dragover', this.handleDragOver.bind(this));
+                DOM.eventosAbertosContainer.addEventListener('dragleave', this.handleDragLeave.bind(this));
+                DOM.eventosAbertosContainer.addEventListener('drop', this.handleDrop.bind(this));
+            },
+            handleCriarEvento() {
+                const eventoData = {
+                    tipo: DOM.eventoTipo.value.trim().toUpperCase(),
+                    endereco: DOM.eventoEndereco.value.trim().toUpperCase(),
+                    horario: DOM.eventoHorario.value,
+                    obs: DOM.eventoObs.value.trim(),
+                    reboquistas: [],
+                    criado: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                };
+                
+                if (!eventoData.tipo || !eventoData.endereco) {
+                    showToast('Tipo de evento e endereço são obrigatórios.', 'warning');
+                    return;
+                }
+                
+                this.adicionarEvento(eventoData);
+                
+                DOM.eventoTipo.value = '';
+                DOM.eventoEndereco.value = '';
+                DOM.eventoHorario.value = '';
+                DOM.eventoObs.value = '';
+                
+                fecharModal(DOM.modalNovoEvento);
+                showToast('Evento criado com sucesso!', 'success');
+            },
+            adicionarEvento(eventoData) {
+                const eventoId = `evento-${AppState.eventoIdCounter++}`;
+                const eventoElement = this.criarCardEvento(eventoId, eventoData);
+                DOM.eventosAbertosContainer.appendChild(eventoElement);
+                this.salvarEstado();
+                return eventoElement;
+            },
+            criarCardEvento(eventoId, eventoData) {
+                const card = document.createElement('div');
+                card.id = eventoId;
+                card.className = 'evento-card';
+                Object.keys(eventoData).forEach(key => { 
+                    if (key !== 'reboquistas') card.dataset[key] = eventoData[key]; 
+                });
+                card.dataset.reboquistas = JSON.stringify(eventoData.reboquistas || []);
+                
+                const reboquistas = eventoData.reboquistas || [];
+                const reboquistasHTML = reboquistas.length > 0 
+                    ? reboquistas.map(r => `<span class="evento-reboquista-tag">${r}</span>`).join('')
+                    : '<span style="color: var(--color-text-tertiary); font-size: 11px;">Arraste reboquistas aqui</span>';
+                
+                card.innerHTML = `
+                    <div class="evento-card-header">
+                        <strong>${eventoData.tipo}</strong>
+                        <span style="font-size: 11px; color: var(--color-text-tertiary);">${eventoData.criado}</span>
+                    </div>
+                    <div class="evento-card-body">
+                        <div style="font-size: 12px; margin-bottom: 4px;"><i class="fas fa-map-marker-alt"></i> ${eventoData.endereco}</div>
+                        ${eventoData.horario ? `<div style="font-size: 11px; color: var(--color-text-secondary);"><i class="far fa-clock"></i> ${eventoData.horario}</div>` : ''}
+                        ${eventoData.obs ? `<div style="font-size: 11px; color: var(--color-text-secondary); margin-top: 4px;"><i class="fas fa-info-circle"></i> ${eventoData.obs}</div>` : ''}
+                    </div>
+                    <div class="evento-card-footer">
+                        <div class="evento-reboquistas">${reboquistasHTML}</div>
+                        <div class="evento-actions">
+                            <button class="btn-card-action edit-evento" title="Editar Evento"><i class="fas fa-pencil-alt"></i></button>
+                            <button class="btn-card-action report-evento" title="Copiar Relatório do Evento"><i class="fab fa-whatsapp"></i></button>
+                            <button class="btn-card-action finalizar-evento" title="Finalizar Evento"><i class="fas fa-check-circle" style="color: var(--color-success);"></i></button>
+                            <button class="btn-card-action remover-evento" title="Remover Evento"><i class="fas fa-trash-alt" style="color: var(--color-danger);"></i></button>
+                        </div>
+                    </div>
+                `;
+                return card;
+            },
+            handleEventoClick(e) {
+                const eventoElement = e.target.closest('.evento-card');
+                if (!eventoElement) return;
+                
+                if (e.target.closest('.finalizar-evento')) this.finalizarEvento(eventoElement);
+                else if (e.target.closest('.remover-evento')) this.removerEvento(eventoElement);
+                else if (e.target.closest('.edit-evento')) this.abrirModalEdicao(eventoElement);
+                else if (e.target.closest('.report-evento')) this.copiarRelatorio(eventoElement);
+            },
+            abrirModalEdicao(eventoCard) {
+                DOM.eventoEditId.value = eventoCard.id;
+                DOM.eventoEditTipo.value = eventoCard.dataset.tipo;
+                DOM.eventoEditEndereco.value = eventoCard.dataset.endereco;
+                DOM.eventoEditHorario.value = eventoCard.dataset.horario;
+                DOM.eventoEditObs.value = eventoCard.dataset.obs;
+                abrirModal(DOM.modalEdicaoEvento);
+            },
+            handleSalvarEdicaoEvento() {
+                const eventoId = DOM.eventoEditId.value;
+                const eventoCard = document.getElementById(eventoId);
+                if (!eventoCard) return;
+
+                const novosDados = {
+                    tipo: DOM.eventoEditTipo.value.trim().toUpperCase(),
+                    endereco: DOM.eventoEditEndereco.value.trim().toUpperCase(),
+                    horario: DOM.eventoEditHorario.value,
+                    obs: DOM.eventoEditObs.value.trim()
+                };
+
+                if (!novosDados.tipo || !novosDados.endereco) {
+                    showToast('Tipo e Endereço não podem ser vazios.', 'error');
+                    return;
+                }
+
+                Object.assign(eventoCard.dataset, novosDados);
+                this.atualizarCard(eventoCard);
+                this.salvarEstado();
+                fecharModal(DOM.modalEdicaoEvento);
+                showToast('Evento atualizado com sucesso!', 'success');
+            },
+            atualizarCard(eventoCard) {
+                const cardData = { ...eventoCard.dataset, reboquistas: JSON.parse(eventoCard.dataset.reboquistas || '[]') };
+                const novoHTML = this.criarCardEvento(eventoCard.id, cardData).innerHTML;
+                eventoCard.innerHTML = novoHTML;
+            },
+            copiarRelatorio(eventoCard) {
+                const reboquistas = JSON.parse(eventoCard.dataset.reboquistas || '[]');
+                let texto = `*RELATÓRIO DE EVENTO*\n\n` +
+                            `*Evento:* ${eventoCard.dataset.tipo}\n` +
+                            `*Endereço:* ${eventoCard.dataset.endereco}\n`;
+                if (eventoCard.dataset.horario) texto += `*Horário:* ${eventoCard.dataset.horario}\n`;
+                if (eventoCard.dataset.obs) texto += `*Obs:* ${eventoCard.dataset.obs}\n\n`;
+                
+                if (reboquistas.length > 0) {
+                    texto += `*Reboquistas Alocados (${reboquistas.length}):*\n` + reboquistas.map(r => `- ${r}`).join('\n');
+                } else {
+                    texto += `*Nenhum reboquista alocado.*`;
+                }
+
+                navigator.clipboard.writeText(texto).then(() => {
+                    showToast('Relatório do evento copiado!', 'success');
+                });
+            },
+            finalizarEvento(eventoElement) {
+                const reboquistas = JSON.parse(eventoElement.dataset.reboquistas || '[]');
+                
+                reboquistas.forEach(nomeReboquista => {
+                    const reboquistaCard = document.querySelector(`.reboque-card[data-nome="${nomeReboquista}"]`);
+                    if (reboquistaCard) {
+                        reboquistaCard.dataset.status = 'disponivel';
+                        reboquistaCard.dataset.ocorrencia = '';
+                        Reboques.atualizarCard(reboquistaCard);
+                        DOM.reboquesDisponiveisContainer.appendChild(reboquistaCard);
+                    }
+                });
+                
+                eventoElement.remove();
+                Reboques.atualizarPainel();
+                this.salvarEstado();
+                showToast(`Evento finalizado! ${reboquistas.length} reboquista(s) liberado(s).`, 'success');
+            },
+            removerEvento(eventoElement) {
+                if (confirm('Tem certeza que deseja remover este evento? Esta ação não libera os reboquistas.')) {
+                    eventoElement.remove();
+                    this.salvarEstado();
+                    showToast('Evento removido.', 'warning');
+                }
+            },
+            alocarReboquistaAoEvento(reboquistaCard, eventoCard, fromModal = false) {
+                if (reboquistaCard.dataset.status === 'atuando' && !fromModal) {
+                    showToast(`${reboquistaCard.dataset.nome} já está em atendimento.`, 'error');
+                    return;
+                }
+
+                const nomeReboquista = reboquistaCard.dataset.nome;
+                const reboquistas = JSON.parse(eventoCard.dataset.reboquistas || '[]');
+                
+                if (reboquistas.includes(nomeReboquista)) {
+                    showToast('Reboquista já está alocado neste evento.', 'info');
+                    return;
+                }
+                
+                reboquistas.push(nomeReboquista);
+                eventoCard.dataset.reboquistas = JSON.stringify(reboquistas);
+                this.atualizarCard(eventoCard);
+                
+                const tipoEvento = eventoCard.dataset.tipo;
+                const endereco = eventoCard.dataset.endereco;
+                
+                reboquistaCard.dataset.status = 'atuando';
+                reboquistaCard.dataset.ocorrencia = `${tipoEvento} @ ${endereco}`;
+                Reboques.atualizarCard(reboquistaCard);
+                DOM.reboquesAtuandoContainer.appendChild(reboquistaCard);
+                
+                if (!fromModal) {
+                    let mensagem = `*${tipoEvento}* enviado para: *${nomeReboquista}*\n` +
+                                   `*Endereço:* ${endereco}`;
+                    if (eventoCard.dataset.horario) mensagem += `\n*Horário:* ${eventoCard.dataset.horario}`;
+                    
+                    navigator.clipboard.writeText(mensagem);
+                    showToast(`${nomeReboquista} acionado! Mensagem copiada.`, 'success');
+                }
+                
+                Reboques.atualizarPainel();
+                this.salvarEstado();
+            },
+            desalocarReboquistaDeEvento(nomeReboquista) {
+                const eventos = document.querySelectorAll('.evento-card');
+                eventos.forEach(eventoCard => {
+                    let reboquistas = JSON.parse(eventoCard.dataset.reboquistas || '[]');
+                    if (reboquistas.includes(nomeReboquista)) {
+                        reboquistas = reboquistas.filter(r => r !== nomeReboquista);
+                        eventoCard.dataset.reboquistas = JSON.stringify(reboquistas);
+                        this.atualizarCard(eventoCard);
+                    }
+                });
+                this.salvarEstado();
+            },
+            renomearReboquistaEmEventos(nomeAntigo, nomeNovo) {
+                const eventos = document.querySelectorAll('.evento-card');
+                eventos.forEach(eventoCard => {
+                    let reboquistas = JSON.parse(eventoCard.dataset.reboquistas || '[]');
+                    const index = reboquistas.indexOf(nomeAntigo);
+                    if (index > -1) {
+                        reboquistas[index] = nomeNovo;
+                        eventoCard.dataset.reboquistas = JSON.stringify(reboquistas);
+                        this.atualizarCard(eventoCard);
+                    }
+                });
+                this.salvarEstado();
+            },
+            handleDragOver(e) {
+                e.preventDefault();
+                const eventoCard = e.target.closest('.evento-card');
+                if (eventoCard && AppState.draggedCard && AppState.draggedCard.classList.contains('reboque-card')) {
+                    eventoCard.classList.add('drop-zone');
+                }
+            },
+            handleDragLeave(e) {
+                const eventoCard = e.target.closest('.evento-card');
+                if (eventoCard) {
+                    eventoCard.classList.remove('drop-zone');
+                }
+            },
+            handleDrop(e) {
+                e.preventDefault();
+                document.querySelectorAll('.evento-card.drop-zone').forEach(card => card.classList.remove('drop-zone'));
+            },
+            salvarEstado() {
+                const estado = { eventos: {}, config: { eventoIdCounter: AppState.eventoIdCounter } };
+                document.querySelectorAll('.evento-card').forEach(card => {
+                    estado.eventos[card.id] = { 
+                        ...card.dataset,
+                        reboquistas: JSON.parse(card.dataset.reboquistas || '[]')
+                    };
+                });
+                localStorage.setItem(AppState.STORAGE_KEY_EVENTOS, JSON.stringify(estado));
+            },
+            carregarEstado() {
+                const estadoSalvo = localStorage.getItem(AppState.STORAGE_KEY_EVENTOS);
+                if (!estadoSalvo) return;
+                const estado = JSON.parse(estadoSalvo);
+                DOM.eventosAbertosContainer.innerHTML = '';
+                if (estado.eventos) {
+                    Object.keys(estado.eventos).forEach(eventoId => {
+                        const eventoData = estado.eventos[eventoId];
+                        DOM.eventosAbertosContainer.appendChild(this.criarCardEvento(eventoId, eventoData));
+                    });
+                }
+                AppState.eventoIdCounter = estado.config?.eventoIdCounter || 0;
+            }
+        };
+
+        const Config = {
+            inicializar() {
+                Object.keys(DOM.configAddBtns).forEach(type => {
+                    DOM.configAddBtns[type].addEventListener('click', () => this.adicionarItem(type));
+                    DOM.configInputs[type].addEventListener('keypress', (e) => { if (e.key === 'Enter') this.adicionarItem(type); });
+                });
+                DOM.btnConfigEditSalvar.addEventListener('click', this.salvarEdicao.bind(this));
+                this.renderizarTodasAsListas();
+                this.atualizarTodosOsDatalists();
+            },
+            adicionarItem(type) {
+                const input = DOM.configInputs[type];
+                const valor = input.value.trim().toUpperCase();
+                if (valor && !AppState.dadosMestres[type].includes(valor)) {
+                    AppState.dadosMestres[type].push(valor);
+                    AppState.dadosMestres[type].sort();
+                    this.salvarDadosMestres();
+                    this.renderizarLista(type);
+                    this.atualizarDatalist(type);
+                    input.value = '';
+                    showToast(`${this.capitalize(type).slice(0, -1)} adicionado!`, 'success');
+                } else if (!valor) {
+                    showToast('O campo não pode estar vazio.', 'warning');
+                } else {
+                    showToast('Este item já existe na lista.', 'info');
+                }
+                input.focus();
+            },
+            removerItem(type, index) {
+                if (confirm(`Tem certeza que
+ deseja remover "${AppState.dadosMestres[type][index]}"?`)) {
+                    AppState.dadosMestres[type].splice(index, 1);
+                    this.salvarDadosMestres();
+                    this.renderizarLista(type);
+                    this.atualizarDatalist(type);
+                    showToast('Item removido!', 'success');
+                }
+            },
+            abrirModalEdicao(type, index) {
+                DOM.configEditInput.value = AppState.dadosMestres[type][index];
+                DOM.configEditType.value = type;
+                DOM.configEditIndex.value = index;
+                abrirModal(DOM.modalEdicaoConfig);
+                DOM.configEditInput.focus();
+            },
+            salvarEdicao() {
+                const type = DOM.configEditType.value;
+                const index = parseInt(DOM.configEditIndex.value, 10);
+                const novoValor = DOM.configEditInput.value.trim().toUpperCase();
+                if (novoValor && (AppState.dadosMestres[type][index] !== novoValor)) {
+                    if (AppState.dadosMestres[type].includes(novoValor)) {
+                        showToast('Este item já existe na lista.', 'error');
+                        return;
+                    }
+                    AppState.dadosMestres[type][index] = novoValor;
+                    AppState.dadosMestres[type].sort();
+                    this.salvarDadosMestres();
+                    this.renderizarLista(type);
+                    this.atualizarDatalist(type);
+                    showToast('Item atualizado!', 'success');
+                }
+                fecharModal(DOM.modalEdicaoConfig);
+            },
+            renderizarLista(type) {
+                const containerIdMap = {
+                    operadores: 'lista-operadores',
+                    supervisores: 'lista-supervisores-config',
+                    monitores: 'lista-monitores-config',
+                    locais: 'lista-locais'
+                };
+                const container = document.getElementById(containerIdMap[type]);
+                if (!container) return;
+                container.innerHTML = '';
+                AppState.dadosMestres[type].forEach((item, index) => {
+                    const listItem = document.createElement('div');
+                    listItem.className = 'config-list-item';
+                    listItem.innerHTML = `
+                        <span>${item}</span>
+                        <button class="btn-icon" title="Editar"><i class="fas fa-pencil-alt"></i></button>
+                        <button class="btn-icon" title="Remover"><i class="fas fa-trash-alt"></i></button>
+                    `;
+                    listItem.querySelector('.fa-pencil-alt').parentElement.addEventListener('click', () => this.abrirModalEdicao(type, index));
+                    listItem.querySelector('.fa-trash-alt').parentElement.addEventListener('click', () => this.removerItem(type, index));
+                    container.appendChild(listItem);
+                });
+            },
+            renderizarTodasAsListas() {
+                Object.keys(AppState.dadosMestres).forEach(type => this.renderizarLista(type));
+            },
+            atualizarDatalist(type) {
+                const datalistIdMap = {
+                    operadores: 'lista-operadores-datalist',
+                    supervisores: 'lista-supervisores',
+                    monitores: 'lista-monitores',
+                    locais: 'lista-locais-datalist'
+                };
+                const datalist = document.getElementById(datalistIdMap[type]);
+                if (datalist) {
+                    datalist.innerHTML = '';
+                    AppState.dadosMestres[type].forEach(item => {
+                        datalist.innerHTML += `<option value="${item}"></option>`;
+                    });
+                }
+            },
+            atualizarTodosOsDatalists() {
+                Object.keys(AppState.dadosMestres).forEach(type => this.atualizarDatalist(type));
+            },
+            salvarDadosMestres() {
+                localStorage.setItem(AppState.STORAGE_KEY_DADOS, JSON.stringify(AppState.dadosMestres));
+            },
+            capitalize: s => s.charAt(0).toUpperCase() + s.slice(1)
+        };
+
+        document.addEventListener('DOMContentLoaded', inicializarApp);
+
+    })();
+    </script>
+
+</body>
+</html>
