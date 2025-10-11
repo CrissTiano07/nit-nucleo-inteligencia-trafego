@@ -145,6 +145,12 @@
         .toast.info { background-color: var(--color-info); }
         #theme-toggle .fa-sun { display: none; } #theme-toggle .fa-moon { display: block; }
         body[data-theme="dark"] #theme-toggle .fa-sun { display: block; } body[data-theme="dark"] #theme-toggle .fa-moon { display: none; }
+
+        .kanban-column-header .cor-atendimento { color: var(--color-danger); }
+        .kanban-column-header .cor-via-livre { color: var(--color-warning); }
+        .kanban-column-header .cor-amc { color: var(--color-success); }
+        .kanban-column-header .header-text i { margin-right: 8px; }
+
     </style>
 </head>
 <body>
@@ -193,7 +199,7 @@
                             <div class="kanban-board">
                                 <div class="kanban-column" id="coluna-espera">
                                     <div class="kanban-column-header">
-                                        <span class="header-text">Aguardando Atendimento</span>
+                                        <span class="header-text cor-atendimento"><i class="fas fa-clock"></i> Aguardando Atendimento</span>
                                         <span class="card-count" id="count-espera">0</span>
                                     </div>
                                     <div class="kanban-cards-container"></div>
@@ -207,14 +213,14 @@
                                 </div>
                                 <div class="kanban-column" id="coluna-vl">
                                     <div class="kanban-column-header">
-                                        <span class="header-text">Via Livre</span>
+                                        <span class="header-text cor-via-livre"><i class="fas fa-clock"></i> Via Livre</span>
                                         <span class="card-count" id="count-vl">0</span>
                                     </div>
                                     <div class="kanban-cards-container"></div>
                                 </div>
                                 <div class="kanban-column" id="coluna-amc">
                                     <div class="kanban-column-header">
-                                        <span class="header-text">AMC</span>
+                                        <span class="header-text cor-amc"><i class="fas fa-clock"></i> AMC</span>
                                         <span class="card-count" id="count-amc">0</span>
                                     </div>
                                     <div class="kanban-cards-container"></div>
