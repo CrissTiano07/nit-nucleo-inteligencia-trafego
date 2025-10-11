@@ -872,31 +872,82 @@
                 kanbanArea.addEventListener('drop', this.handleDrop.bind(this));
                 kanbanArea.addEventListener('click', this.handleKanbanBoardClick.bind(this));
             },
-            handleProcessarClick() {
-                const textoBruto = DOM.relatorioBrutoInput.value.trim();
-                if (!textoBruto) { showToast('Insira o relatório bruto para processar.', 'warning'); return; }
-                
-                const linhas = textoBruto.split('\n').filter(linha => linha.trim() !== '');
-                let novosCardsAdicionados = 0;
+            // SUBSTITUA A FUNÇÃO handleProcessarClick INTEIRA POR ESTA:
 
-                linhas.forEach(linha => {
-                    const cardData = this.extrairDadosDoBloco(linha);
-                    if (cardData && !this.cardExiste(cardData.codigo)) {
-                        const cardId = `card-${AppState.cardIdCounter++}`;
-                        const cardElement = this.criarElementoCard(cardId, cardData);
-                        document.querySelector('#coluna-espera .kanban-cards-container').appendChild(cardElement);
-                        novosCardsAdicionados++;
-                    }
-                });
+    handleProcessarClick() {
+        // 1. Pega o texto bruto e divide em linhas.
+        const textoBruto = DOM.relatorioBrutoInput.value.trim();
+        if (!textoBruto) {
+            showToast('Insira o relatório bruto para processar.', 'warning');
+            return;
+        }
+        const linhas = textoBruto.split('\n').filter(linha => linha.trim() !== '');
 
-                if (novosCardsAdicionados > 0) {
-                    this.atualizarPainel();
-                    showToast(`${novosCardsAdicionados} ocorrência(s) processada(s)!`, 'success');
+        // 2. Inicializa as listas para o relatório final.
+        let sucessos = [];
+        let bloqueados = [];
+
+        // 3. Processa cada linha SEM INTERRUPÇÕES.
+        linhas.forEach(linha => {
+            const cardData = this.extrairDadosDoBloco(linha);
+            if (!cardData) return; // Pula linha inválida.
+
+            const cardExistente = document.querySelector(`.kanban-card[data-codigo='${cardData.codigo}']`);
+
+            if (cardExistente) {
+                // Card já existe. Verificamos se está ativo.
+                const colunaDoCard = cardExistente.closest('.kanban-cards-container').id;
+                const isAtivo = (colunaDoCard !== 'coluna-normalizados');
+
+                if (isAtivo) {
+                    // BLOQUEADO: Adiciona à lista de bloqueados.
+                    bloqueados.push(cardData.codigo);
                 } else {
-                    showToast('Nenhuma nova ocorrência encontrada ou já existem no painel.', 'info');
+                    // PERMITIDO (estava normalizado): Cria o novo card e adiciona à lista de sucessos.
+                    const cardId = `card-${AppState.cardIdCounter++}`;
+                    const cardElement = this.criarElementoCard(cardId, cardData);
+                    document.querySelector('#coluna-espera .kanban-cards-container').appendChild(cardElement);
+                    sucessos.push(cardData.codigo);
                 }
-                DOM.relatorioBrutoInput.value = '';
-            },
+            } else {
+                // PERMITIDO (card novo): Cria o novo card e adiciona à lista de sucessos.
+                const cardId = `card-${AppState.cardIdCounter++}`;
+                const cardElement = this.criarElementoCard(cardId, cardData);
+                document.querySelector('#coluna-espera .kanban-cards-container').appendChild(cardElement);
+                sucessos.push(cardData.codigo);
+            }
+        });
+
+        // 4. Atualiza o painel e gera o relatório final para o usuário.
+        if (sucessos.length > 0) {
+            this.atualizarPainel(); // Atualiza contagens, etc.
+        }
+
+        let mensagemFinal = '';
+        if (sucessos.length > 0) {
+            mensagemFinal += `${sucessos.length} ocorrência(s) processada(s) com sucesso.`;
+        }
+
+        if (bloqueados.length > 0) {
+            // Se houve sucessos, adiciona uma quebra de linha.
+            if (mensagemFinal) mensagemFinal += '\n'; 
+            mensagemFinal += `${bloqueados.length} ocorrência(s) bloqueada(s) por já estarem ativas: ${bloqueados.join(', ')}.`;
+            
+            // Usa alert() para garantir que o usuário veja a informação crítica de bloqueio.
+            alert(mensagemFinal);
+        } else if (sucessos.length > 0) {
+            // Se só houve sucessos, usa um toast não-invasivo.
+            showToast(mensagemFinal, 'success');
+        } else {
+            // Se nada foi processado (só duplicatas ativas ou entrada vazia).
+            showToast('Nenhuma nova ocorrência para processar.', 'info');
+        }
+
+        // 5. Limpa o campo de entrada.
+        DOM.relatorioBrutoInput.value = '';
+    },
+
+
             extrairDadosDoBloco(bloco) {
                 const formatoNovoMatch = bloco.match(/🚦\s*(\d{3,4})\s*🚦\s*(.*?)\s*●\s*(APAGADO|PISCANTE|TRAVADO|INTERMITENTE|N\/I)/i);
                 if (formatoNovoMatch) {
