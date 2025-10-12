@@ -151,6 +151,16 @@
         .kanban-column-header .cor-via-livre { color: var(--color-warning); }
         .kanban-column-header .cor-amc { color: var(--color-success); }
         .kanban-column-header .header-text i { margin-right: 8px; }
+        .reincident-tag {
+        background-color: var(--color-info);
+        color: white;
+        font-size: 9px;
+        font-weight: 700;
+        padding: 2px 6px;
+        border-radius: 8px;
+        margin-left: 8px;
+    }
+
 
     </style>
 </head>
@@ -617,6 +627,7 @@
             STORAGE_KEY_EVENTOS: 'gerador-premium-v9.1-eventos',
             STORAGE_KEY_DADOS: 'gerador-premium-v9.1-dadosMestres',
             cardIdCounter: 0,
+            totalOcorrenciasCriadas: 0,
             reboqueIdCounter: 0,
             eventoIdCounter: 0,
             draggedCard: null,
@@ -892,77 +903,100 @@
             // SUBSTITUA A FUNÇÃO handleProcessarClick INTEIRA POR ESTA:
 
     handleProcessarClick() {
-        // 1. Pega o texto bruto e divide em linhas.
-        const textoBruto = DOM.relatorioBrutoInput.value.trim();
-        if (!textoBruto) {
-            showToast('Insira o relatório bruto para processar.', 'warning');
-            return;
-        }
-        const linhas = textoBruto.split('\n').filter(linha => linha.trim() !== '');
+    const textoBruto = DOM.relatorioBrutoInput.value;
+    if (!textoBruto) {
+        showToast('Insira o relatório bruto para processar.', 'warning');
+        return;
+    }
 
-        // 2. Inicializa as listas para o relatório final.
-        let sucessos = [];
-        let bloqueados = [];
+    // Modo de Carga Inicial
+    if (/NORMALIZADOS✅/i.test(textoBruto)) {
+        document.querySelectorAll('#tab-semaforo .kanban-card').forEach(card => card.remove());
+        AppState.totalOcorrenciasCriadas = 0;
+        AppState.cardIdCounter = 0;
 
-        // 3. Processa cada linha SEM INTERRUPÇÕES.
-        linhas.forEach(linha => {
-            const cardData = this.extrairDadosDoBloco(linha);
-            if (!cardData) return; // Pula linha inválida.
+        const secoes = textoBruto.split(/NORMALIZADOS✅/i);
+        const textoPendentes = secoes[0];
+        const textoNormalizados = secoes.length > 1 ? secoes[1] : '';
 
-            const cardExistente = document.querySelector(`.kanban-card[data-codigo='${cardData.codigo}']`);
-
-            if (cardExistente) {
-                // Card já existe. Verificamos se está ativo.
-                const colunaDoCard = cardExistente.closest('.kanban-cards-container').id;
-                const isAtivo = (colunaDoCard !== 'coluna-normalizados');
-
-                if (isAtivo) {
-                    // BLOQUEADO: Adiciona à lista de bloqueados.
-                    bloqueados.push(cardData.codigo);
-                } else {
-                    // PERMITIDO (estava normalizado): Cria o novo card e adiciona à lista de sucessos.
+        const processarSecao = (texto, destinoContainer) => {
+            if (!texto) return;
+            const linhas = texto.split('\n');
+            linhas.forEach(linha => {
+                const cardData = this.extrairDadosDoBloco(linha);
+                if (cardData) {
+                    // Na carga inicial, PERMITIMOS a criação de cards com o mesmo código
+                    // pois eles podem estar em seções diferentes.
                     const cardId = `card-${AppState.cardIdCounter++}`;
                     const cardElement = this.criarElementoCard(cardId, cardData);
-                    document.querySelector('#coluna-espera .kanban-cards-container').appendChild(cardElement);
-                    sucessos.push(cardData.codigo);
+                    destinoContainer.appendChild(cardElement);
+                    AppState.totalOcorrenciasCriadas++;
                 }
-            } else {
-                // PERMITIDO (card novo): Cria o novo card e adiciona à lista de sucessos.
+            });
+        };
+
+        processarSecao(textoPendentes, document.querySelector('#coluna-espera .kanban-cards-container'));
+        processarSecao(textoNormalizados, DOM.colunaNormalizados);
+
+    // ... (início da função handleProcessarClick)
+} else {
+    // Modo Incremental: Processa linha a linha sem limpar o painel.
+    const linhas = textoBruto.split('\n');
+    let sucessos = 0;
+    let bloqueados = [];
+
+    linhas.forEach(linha => {
+        const cardData = this.extrairDadosDoBloco(linha);
+        if (!cardData) return;
+
+        const cardExistente = document.querySelector(`.kanban-card[data-codigo='${cardData.codigo}']`);
+        if (cardExistente) {
+            const isAtivo = cardExistente.closest('.kanban-cards-container').id !== 'coluna-normalizados';
+            if (isAtivo) {
+                // BLOQUEADO: Adiciona à lista para notificação posterior.
+                bloqueados.push(cardData.codigo);
+            } else { // É reincidência
                 const cardId = `card-${AppState.cardIdCounter++}`;
                 const cardElement = this.criarElementoCard(cardId, cardData);
                 document.querySelector('#coluna-espera .kanban-cards-container').appendChild(cardElement);
-                sucessos.push(cardData.codigo);
+                AppState.totalOcorrenciasCriadas++;
+                sucessos++;
             }
-        });
-
-        // 4. Atualiza o painel e gera o relatório final para o usuário.
-        if (sucessos.length > 0) {
-            this.atualizarPainel(); // Atualiza contagens, etc.
+        } else { // Card totalmente novo
+            const cardId = `card-${AppState.cardIdCounter++}`;
+            const cardElement = this.criarElementoCard(cardId, cardData);
+            document.querySelector('#coluna-espera .kanban-cards-container').appendChild(cardElement);
+            AppState.totalOcorrenciasCriadas++;
+            sucessos++;
         }
+    });
 
-        let mensagemFinal = '';
-        if (sucessos.length > 0) {
-            mensagemFinal += `${sucessos.length} ocorrência(s) processada(s) com sucesso.`;
-        }
+    // Lógica de feedback para o Modo Incremental
+    let mensagemFinal = '';
+    if (sucessos > 0) {
+        mensagemFinal += `${sucessos} nova(s) ocorrência(s) adicionada(s).`;
+    }
+    if (bloqueados.length > 0) {
+        if (mensagemFinal) mensagemFinal += ' ';
+        mensagemFinal += `${bloqueados.length} ocorrência(s) ignorada(s) por já estarem ativas: ${bloqueados.join(', ')}. Normalize a ocorrência existente para poder adicionar uma nova.`;
+    }
 
-        if (bloqueados.length > 0) {
-            // Se houve sucessos, adiciona uma quebra de linha.
-            if (mensagemFinal) mensagemFinal += '\n'; 
-            mensagemFinal += `${bloqueados.length} ocorrência(s) bloqueada(s) por já estarem ativas: ${bloqueados.join(', ')}.`;
-            
-            // Usa alert() para garantir que o usuário veja a informação crítica de bloqueio.
-            alert(mensagemFinal);
-        } else if (sucessos.length > 0) {
-            // Se só houve sucessos, usa um toast não-invasivo.
-            showToast(mensagemFinal, 'success');
-        } else {
-            // Se nada foi processado (só duplicatas ativas ou entrada vazia).
-            showToast('Nenhuma nova ocorrência para processar.', 'info');
-        }
+    if (mensagemFinal) {
+        // Usa um toast de aviso se houve bloqueios, para chamar a atenção.
+        const toastType = bloqueados.length > 0 ? 'warning' : 'success';
+        showToast(mensagemFinal, toastType, 7000); // 7 segundos para dar tempo de ler a mensagem completa.
+    } else if (textoBruto) {
+        showToast('Nenhuma ocorrência válida encontrada no texto.', 'warning');
+    }
+}
 
-        // 5. Limpa o campo de entrada.
-        DOM.relatorioBrutoInput.value = '';
-    },
+this.atualizarPainel();
+// A linha do showToast que estava aqui foi movida para dentro dos blocos if/else.
+DOM.relatorioBrutoInput.value = '';
+},
+
+
+
 
 
             extrairDadosDoBloco(bloco) {
@@ -1021,7 +1055,7 @@
                 };
                 const totalNormalizados = contadores.normalizados;
                 const totalPendentes = Object.values(contadores).reduce((a, b) => a + b, 0) - totalNormalizados;
-                DOM.displayTotal.textContent = totalPendentes + totalNormalizados;
+                DOM.displayTotal.textContent = AppState.totalOcorrenciasCriadas;
                 DOM.displayPendentes.textContent = totalPendentes;
                 DOM.displayNormalizados.textContent = totalNormalizados;
                 DOM.countNormalizadosGaveta.textContent = totalNormalizados;
@@ -1071,16 +1105,25 @@
                 return DOM.relatorioFinalPreview.value;
             },
             salvarEstado() {
-                const estado = { colunas: {}, cards: {}, config: { incluirNormalizados: DOM.checkIncluirNormalizados.checked, cardIdCounter: AppState.cardIdCounter } };
-                document.querySelectorAll('.kanban-column .kanban-cards-container, #gaveta-arquivados .kanban-cards-container').forEach(container => {
-                    const colunaId = container.closest('.kanban-column, #gaveta-arquivados').id;
-                    estado.colunas[colunaId] = Array.from(container.querySelectorAll('.kanban-card')).map(card => card.id);
-                });
-                document.querySelectorAll('#tab-semaforo .kanban-card').forEach(card => {
-                    estado.cards[card.id] = { ...card.dataset };
-                });
-                localStorage.setItem(AppState.STORAGE_KEY_SEMAFORO, JSON.stringify(estado));
-            },
+    const estado = {
+        colunas: {},
+        cards: {},
+        config: {
+            incluirNormalizados: DOM.checkIncluirNormalizados.checked,
+            cardIdCounter: AppState.cardIdCounter,
+            totalOcorrenciasCriadas: AppState.totalOcorrenciasCriadas // <-- LINHA MOVIDA PARA DENTRO DO CONFIG
+        }
+    };
+    document.querySelectorAll('.kanban-column .kanban-cards-container, #gaveta-arquivados .kanban-cards-container').forEach(container => {
+        const colunaId = container.closest('.kanban-column, #gaveta-arquivados').id;
+        estado.colunas[colunaId] = Array.from(container.querySelectorAll('.kanban-card')).map(card => card.id);
+    });
+    document.querySelectorAll('#tab-semaforo .kanban-card').forEach(card => {
+        estado.cards[card.id] = { ...card.dataset };
+    });
+    localStorage.setItem(AppState.STORAGE_KEY_SEMAFORO, JSON.stringify(estado));
+},
+
             carregarEstado() {
                 const estadoSalvo = localStorage.getItem(AppState.STORAGE_KEY_SEMAFORO);
                 if (!estadoSalvo) { this.atualizarPainel(); return; }
@@ -1102,6 +1145,7 @@
                     });
                 }
                 AppState.cardIdCounter = estado.config?.cardIdCounter || 0;
+                AppState.totalOcorrenciasCriadas = estado.config?.totalOcorrenciasCriadas || 0;
                 DOM.checkIncluirNormalizados.checked = estado.config?.incluirNormalizados || false;
                 this.atualizarPainel();
             },
@@ -1215,6 +1259,7 @@
                     document.querySelectorAll('#tab-semaforo .kanban-cards-container').forEach(c => c.innerHTML = '');
                     if (DOM.relatorioFinalPreview) DOM.relatorioFinalPreview.value = '';
                     AppState.cardIdCounter = 0;
+                    AppState.totalOcorrenciasCriadas = 0;
                     this.atualizarPainel();
                     showToast('Painel semafórico limpo!', 'success');
                 }
