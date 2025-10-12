@@ -743,6 +743,8 @@
         function inicializarApp() {
             queryDOM();
             carregarDadosMestres();
+
+            
             
             const currentTheme = localStorage.getItem('theme') || 'dark';
             document.body.setAttribute('data-theme', currentTheme);
@@ -781,7 +783,7 @@
             DOM.tabButtons.forEach(button => button.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
             document.querySelector(`.tab-button[data-tab="${tabId}"]`).classList.add('active');
-            localStorage.setItem('activeTab', tabId);
+            
         }
 
         function toggleTheme() {
@@ -792,11 +794,25 @@
         }
 
         function limparTudo() {
-            if (confirm("ATENÇÃO: Limpar TODOS os dados? (Ocorrências, Rascunhos e Configurações). Ação irreversível.")) {
-                localStorage.clear();
-                location.reload();
-            }
-        }
+    const abaAtiva = document.querySelector('.tab-content.active').id;
+
+    switch (abaAtiva) {
+        case 'tab-semaforo':
+            Semaforo.limparPainel();
+            break;
+        case 'tab-reboques':
+            Reboques.limparPainel();
+            break;
+        case 'tab-turno':
+            Turno.limparPainel();
+            break;
+        default:
+            showToast('Esta aba não possui uma ação de limpeza.', 'info');
+            break;
+    }
+}
+
+
 
         function showToast(message, type = 'success', duration = 3000) {
             if (!DOM.toastContainer) return;
@@ -1190,7 +1206,23 @@
             getDragAfterElement(container, y) { const draggableElements = [...container.querySelectorAll('.kanban-card:not(.dragging)')]; return draggableElements.reduce((closest, child) => { const box = child.getBoundingClientRect(); const offset = y - box.top - box.height / 2; if (offset < 0 && offset > closest.offset) { return { offset: offset, element: child }; } else { return closest; } }, { offset: Number.NEGATIVE_INFINITY }).element; },
             handleDragLeave(e) { const container = e.target.closest('.kanban-cards-container'); if(container) container.classList.remove('drag-over'); },
             handleDrop(e) { e.preventDefault(); const destinoContainer = e.target.closest('.kanban-cards-container'); if (destinoContainer && AppState.draggedCard && AppState.draggedCard.classList.contains('kanban-card')) { if (AppState.placeholder && AppState.placeholder.parentNode) { AppState.placeholder.parentNode.replaceChild(AppState.draggedCard, AppState.placeholder); } else { destinoContainer.appendChild(AppState.draggedCard); } this.atualizarPainel(); showToast('Card movido!', 'success'); } if(destinoContainer) destinoContainer.classList.remove('drag-over'); },
-        };
+
+              
+            limparPainel() {
+                if (confirm("Tem certeza que deseja limpar TODOS os dados da aba SEMAFÓRICO?")) {
+                    localStorage.removeItem(AppState.STORAGE_KEY_SEMAFORO);
+                    document.querySelectorAll('#tab-semaforo .kanban-cards-container').forEach(c => c.innerHTML = '');
+                    if (DOM.relatorioFinalPreview) DOM.relatorioFinalPreview.value = '';
+                    AppState.cardIdCounter = 0;
+                    this.atualizarPainel();
+                    showToast('Painel semafórico limpo!', 'success');
+                }
+            }
+
+// ... (aqui virá a chave de fechamento final do objeto Semaforo: `};`)
+
+
+        }; //
 
         const Turno = {
             inicializar() {
@@ -1297,7 +1329,23 @@
                     DOM.turnoOcorrenciasContainer.innerHTML = '';
                     rascunho.ocorrencias.forEach(ocorrencia => this.adicionarOcorrencia(ocorrencia));
                 }
+            },
+
+              limparPainel() {
+                if (confirm("Tem certeza que deseja limpar TODOS os dados da aba RELATÓRIO DE TURNO?")) {
+                    localStorage.removeItem(AppState.STORAGE_KEY_TURNO);
+                    if (DOM.turnoOcorrenciasContainer) DOM.turnoOcorrenciasContainer.innerHTML = '';
+                    if (DOM.saidaTurno) DOM.saidaTurno.value = '';
+                    document.querySelectorAll('#tab-turno .form-grid input, #tab-turno .form-grid select').forEach(input => {
+                        if(input.type !== 'date') input.value = '';
+                    });
+                    DOM.turnoData.valueAsDate = new Date();
+                    showToast('Dados de turno limpos!', 'success');
+                }
             }
+
+                
+
         };
 
         const Reboques = {
@@ -1655,6 +1703,27 @@
                     Eventos.alocarReboquistaAoEvento(AppState.draggedCard, dropTarget.closest('.evento-card'));
                 }
             },
+            
+
+             limparPainel() {
+                if (confirm("Tem certeza que deseja limpar TODOS os dados da aba REBOQUES e EVENTOS?")) {
+                    localStorage.removeItem(AppState.STORAGE_KEY_REBOQUES);
+                    localStorage.removeItem(AppState.STORAGE_KEY_EVENTOS);
+                    if (DOM.reboquesDisponiveisContainer) DOM.reboquesDisponiveisContainer.innerHTML = '';
+                    if (DOM.reboquesAtuandoContainer) DOM.reboquesAtuandoContainer.innerHTML = '';
+                    if (DOM.eventosAbertosContainer) DOM.eventosAbertosContainer.innerHTML = '';
+                    AppState.reboqueIdCounter = 0;
+                    AppState.eventoIdCounter = 0;
+                    this.atualizarPainel();
+                    Eventos.salvarEstado();
+                    showToast('Painel de reboques e eventos limpo!', 'success');
+                }
+            }
+
+// ... (aqui virá a chave de fechamento final do objeto Reboques: `};`)
+
+
+
         };
 
         const Eventos = {
@@ -1958,8 +2027,7 @@
                 input.focus();
             },
             removerItem(type, index) {
-                if (confirm(`Tem certeza que
- deseja remover "${AppState.dadosMestres[type][index]}"?`)) {
+                if (confirm(`Tem certeza que deseja remover "${AppState.dadosMestres[type][index]}"?`)) {
                     AppState.dadosMestres[type].splice(index, 1);
                     this.salvarDadosMestres();
                     this.renderizarLista(type);
