@@ -306,6 +306,7 @@
                         <div class="painel-body">
                             <div class="balanco-compacto">
                                 <div class="balanco-item">
+                                    
                                     <span>Disponíveis</span><strong id="reboques-count-disponiveis" style="color: var(--color-success);">0</strong>
                                 </div>
                                 <div class="balanco-item">
@@ -314,7 +315,13 @@
                                 <div class="balanco-item">
                                     <span>Total</span><strong id="reboques-count-total">0</strong>
                                 </div>
-                            </div>
+                                
+                            </div> 
+                            <!-- Botão para Gerar Relatório da Frota -->
+                            <button id="btn-gerar-relatorio-frota" class="btn btn-secundario" style="width:100%; margin-top:16px;">
+                                <i class="fas fa-file-alt"></i> Gerar Relatório da Frota
+                            </button>
+
                         </div>
                     </div>
                     <div class="painel">
@@ -680,6 +687,7 @@
                 reboquesCountAtuando: document.getElementById('reboques-count-atuando'),
                 reboquesCountTotal: document.getElementById('reboques-count-total'),
                 btnAddReboquista: document.getElementById('btn-add-reboquista'),
+                btnGerarRelatorioFrota: document.getElementById('btn-gerar-relatorio-frota'), // <-- ADICIONE ESTA LINHA
                 btnNovoEvento: document.getElementById('btn-novo-evento'),
                 eventosAbertosContainer: document.getElementById('eventos-abertos'),
                 configAddBtns: {
@@ -1265,7 +1273,7 @@ DOM.relatorioBrutoInput.value = '';
                 }
             }
 
-// ... (aqui virá a chave de fechamento final do objeto Semaforo: `};`)
+            // ... (aqui virá a chave de fechamento final do objeto Semaforo: `};`)
 
 
         }; //
@@ -1398,6 +1406,7 @@ DOM.relatorioBrutoInput.value = '';
             inicializar() {
                 this.carregarEstado();
                 DOM.btnProcessarReboques.addEventListener('click', this.handleProcessarClick.bind(this));
+                DOM.btnGerarRelatorioFrota.addEventListener('click', this.gerarRelatorioFrota.bind(this)); // <-- ADICIONE ESTA LINHA
                 DOM.btnAddReboquista.addEventListener('click', () => this.abrirModalEdicao());
                 DOM.btnReboqueAcionamentoConfirmar.addEventListener('click', this.handleFinalizarAcionamentoMultiplo.bind(this));
                 DOM.btnReboqueAcionamentoAdicionarOutro.addEventListener('click', this.handleAdicionarOutroReboque.bind(this));
@@ -1604,7 +1613,10 @@ DOM.relatorioBrutoInput.value = '';
                 }
 
                 finalEventoData.criado = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                finalEventoData.reboquistas = [];
+                finalEventoData.reboquistas = reboquistas.map(card => ({
+                    nome: card.dataset.nome,
+                    vt: card.dataset.vt
+                }));
 
                 const eventoCard = Eventos.adicionarEvento(finalEventoData);
                 
@@ -1764,9 +1776,50 @@ DOM.relatorioBrutoInput.value = '';
                     Eventos.salvarEstado();
                     showToast('Painel de reboques e eventos limpo!', 'success');
                 }
-            }
-
+            },
 // ... (aqui virá a chave de fechamento final do objeto Reboques: `};`)
+gerarRelatorioFrota() {
+    const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '.');
+    const disponiveis = DOM.reboquesDisponiveisContainer.querySelectorAll('.reboque-card');
+    const atuando = DOM.reboquesAtuandoContainer.querySelectorAll('.reboque-card');
+
+    let texto = `*RELATÓRIO DE STATUS DA FROTA DE REBOQUES*\n*Data:* ${hoje}\n\n`;
+
+    texto += `*Resumo da Frota:*\n` +
+             `- 🟢 *Disponíveis:* ${disponiveis.length}\n` +
+             `- 🟡 *Em Atendimento:* ${atuando.length}\n` +
+             `- 🚛 *Total:* ${disponiveis.length + atuando.length}\n\n`;
+
+    if (atuando.length > 0) {
+        texto += `---\n\n🟡 *OCORRÊNCIAS EM ATENDIMENTO (${atuando.length}):*\n\n`;
+
+        // PASSO 1: Agrupar reboquistas por evento
+        const eventosAgrupados = {};
+        atuando.forEach(card => {
+            const evento = card.dataset.ocorrencia ? card.dataset.ocorrencia.split(' @ ')[0].toUpperCase() : 'EVENTO NÃO ESPECIFICADO';
+            if (!eventosAgrupados[evento]) {
+                eventosAgrupados[evento] = [];
+            }
+            eventosAgrupados[evento].push(card);
+        });
+
+        // PASSO 2: Gerar o texto a partir dos dados agrupados
+        for (const evento in eventosAgrupados) {
+            texto += `*${evento}*\n`;
+            eventosAgrupados[evento].forEach(card => {
+                texto += `- *Reboquista:* ${card.dataset.nome} (VT: ${card.dataset.vt || 'N/I'})\n` +
+                         `- *Contato:* ${card.dataset.smart || 'N/I'}\n\n`;
+            });
+        }
+
+    } else {
+        texto += `---\n\n*Todos os reboquistas estão disponíveis.*`;
+    }
+
+    // Reutiliza o modal de relatório semafórico para exibir o texto
+    DOM.modalRelatorioTexto.value = texto.trim();
+    abrirModal(DOM.modalRelatorio);
+}
 
 
 
@@ -1815,7 +1868,7 @@ DOM.relatorioBrutoInput.value = '';
                 this.salvarEstado();
                 return eventoElement;
             },
-            criarCardEvento(eventoId, eventoData) {
+                        criarCardEvento(eventoId, eventoData) {
                 const card = document.createElement('div');
                 card.id = eventoId;
                 card.className = 'evento-card';
@@ -1825,8 +1878,12 @@ DOM.relatorioBrutoInput.value = '';
                 card.dataset.reboquistas = JSON.stringify(eventoData.reboquistas || []);
                 
                 const reboquistas = eventoData.reboquistas || [];
+                // MODIFICAÇÃO AQUI: Agora busca o objeto completo do reboquista para pegar a VT
                 const reboquistasHTML = reboquistas.length > 0 
-                    ? reboquistas.map(r => `<span class="evento-reboquista-tag">${r}</span>`).join('')
+                    ? reboquistas.map(reboquista => {
+                          // O objeto agora guarda { nome, vt }
+                          return `<span class="evento-reboquista-tag">${reboquista.nome} (VT: ${reboquista.vt || 'N/I'})</span>`;
+                      }).join('')
                     : '<span style="color: var(--color-text-tertiary); font-size: 11px;">Arraste reboquistas aqui</span>';
                 
                 card.innerHTML = `
@@ -1851,6 +1908,7 @@ DOM.relatorioBrutoInput.value = '';
                 `;
                 return card;
             },
+
             handleEventoClick(e) {
                 const eventoElement = e.target.closest('.evento-card');
                 if (!eventoElement) return;
@@ -1896,42 +1954,53 @@ DOM.relatorioBrutoInput.value = '';
                 const novoHTML = this.criarCardEvento(eventoCard.id, cardData).innerHTML;
                 eventoCard.innerHTML = novoHTML;
             },
-            copiarRelatorio(eventoCard) {
-                const reboquistas = JSON.parse(eventoCard.dataset.reboquistas || '[]');
-                let texto = `*RELATÓRIO DE EVENTO*\n\n` +
-                            `*Evento:* ${eventoCard.dataset.tipo}\n` +
-                            `*Endereço:* ${eventoCard.dataset.endereco}\n`;
-                if (eventoCard.dataset.horario) texto += `*Horário:* ${eventoCard.dataset.horario}\n`;
-                if (eventoCard.dataset.obs) texto += `*Obs:* ${eventoCard.dataset.obs}\n\n`;
-                
-                if (reboquistas.length > 0) {
-                    texto += `*Reboquistas Alocados (${reboquistas.length}):*\n` + reboquistas.map(r => `- ${r}`).join('\n');
-                } else {
-                    texto += `*Nenhum reboquista alocado.*`;
+                            copiarRelatorio(eventoCard) {
+                // Prepara o texto para o WhatsApp, usando %0A para quebras de linha
+                let relatorio = `*Tem preferência de reboquista para este evento?*%0A%0A`; // <-- TÍTULO ALTERADO
+                relatorio += `*Evento:* ${eventoCard.dataset.tipo}%0A`;
+                relatorio += `*Endereço:* ${eventoCard.dataset.endereco}%0A`;
+                if (eventoCard.dataset.horario) {
+                    relatorio += `*Horário:* ${eventoCard.dataset.horario}%0A`;
+                }
+                if (eventoCard.dataset.obs) {
+                    relatorio += `*Obs:* ${eventoCard.dataset.obs}%0A`;
                 }
 
-                navigator.clipboard.writeText(texto).then(() => {
-                    showToast('Relatório do evento copiado!', 'success');
+                // Decodifica o texto para a área de transferência (converte %0A para \n)
+                const textoParaClipboard = decodeURIComponent(relatorio.trim());
+
+                navigator.clipboard.writeText(textoParaClipboard).then(() => {
+                    showToast('Solicitação de indicação copiada!', 'success'); // <-- Mensagem de feedback também ajustada
                 });
             },
-            finalizarEvento(eventoElement) {
-                const reboquistas = JSON.parse(eventoElement.dataset.reboquistas || '[]');
+
+
+                          finalizarEvento(eventoElement) {
+                const reboquistasNoEvento = JSON.parse(eventoElement.dataset.reboquistas || '[]');
+                const nomesDosReboquistas = reboquistasNoEvento.map(r => r.nome); // Pega apenas os nomes
+
+                if (nomesDosReboquistas.length > 0) {
+                    // Pega TODOS os cards da coluna "Atuando"
+                    const reboquistasAtuando = document.querySelectorAll('#reboques-atuando .reboque-card');
+
+                    reboquistasAtuando.forEach(reboquistaCard => {
+                        // Verifica se o nome do reboquista no card está na lista do evento que estamos finalizando
+                        if (nomesDosReboquistas.includes(reboquistaCard.dataset.nome)) {
+                            // Se estiver, atualiza seu status e o move para a coluna "Disponíveis"
+                            reboquistaCard.dataset.status = 'disponivel';
+                            reboquistaCard.dataset.ocorrencia = '';
+                            Reboques.atualizarCard(reboquistaCard); // Redesenha o card com o status "disponivel"
+                            DOM.reboquesDisponiveisContainer.appendChild(reboquistaCard); // Move o elemento
+                        }
+                    });
+                }
                 
-                reboquistas.forEach(nomeReboquista => {
-                    const reboquistaCard = document.querySelector(`.reboque-card[data-nome="${nomeReboquista}"]`);
-                    if (reboquistaCard) {
-                        reboquistaCard.dataset.status = 'disponivel';
-                        reboquistaCard.dataset.ocorrencia = '';
-                        Reboques.atualizarCard(reboquistaCard);
-                        DOM.reboquesDisponiveisContainer.appendChild(reboquistaCard);
-                    }
-                });
-                
-                eventoElement.remove();
-                Reboques.atualizarPainel();
+                eventoElement.remove(); // Remove o card do evento
+                Reboques.atualizarPainel(); // Atualiza contadores e salva o estado
                 this.salvarEstado();
-                showToast(`Evento finalizado! ${reboquistas.length} reboquista(s) liberado(s).`, 'success');
+                showToast(`Evento finalizado! ${nomesDosReboquistas.length} reboquista(s) liberado(s).`, 'success');
             },
+
             removerEvento(eventoElement) {
                 if (confirm('Tem certeza que deseja remover este evento? Esta ação não libera os reboquistas.')) {
                     eventoElement.remove();
@@ -1946,14 +2015,15 @@ DOM.relatorioBrutoInput.value = '';
                 }
 
                 const nomeReboquista = reboquistaCard.dataset.nome;
+                const vtReboquista = reboquistaCard.dataset.vt; // <-- Pega a VT do card do reboquista
                 const reboquistas = JSON.parse(eventoCard.dataset.reboquistas || '[]');
                 
-                if (reboquistas.includes(nomeReboquista)) {
+                if (reboquistas.some(r => r.nome === nomeReboquista)) {
                     showToast('Reboquista já está alocado neste evento.', 'info');
                     return;
                 }
                 
-                reboquistas.push(nomeReboquista);
+                reboquistas.push({ nome: nomeReboquista, vt: vtReboquista });
                 eventoCard.dataset.reboquistas = JSON.stringify(reboquistas);
                 this.atualizarCard(eventoCard);
                 
@@ -1981,8 +2051,8 @@ DOM.relatorioBrutoInput.value = '';
                 const eventos = document.querySelectorAll('.evento-card');
                 eventos.forEach(eventoCard => {
                     let reboquistas = JSON.parse(eventoCard.dataset.reboquistas || '[]');
-                    if (reboquistas.includes(nomeReboquista)) {
-                        reboquistas = reboquistas.filter(r => r !== nomeReboquista);
+                    if (reboquistas.some(r => r.nome === nomeReboquista)) {
+                        reboquistas = reboquistas.filter(r => r.nome !== nomeReboquista);
                         eventoCard.dataset.reboquistas = JSON.stringify(reboquistas);
                         this.atualizarCard(eventoCard);
                     }
@@ -1993,9 +2063,9 @@ DOM.relatorioBrutoInput.value = '';
                 const eventos = document.querySelectorAll('.evento-card');
                 eventos.forEach(eventoCard => {
                     let reboquistas = JSON.parse(eventoCard.dataset.reboquistas || '[]');
-                    const index = reboquistas.indexOf(nomeAntigo);
-                    if (index > -1) {
-                        reboquistas[index] = nomeNovo;
+                    const reboquistaParaRenomear = reboquistas.find(r => r.nome === nomeAntigo);
+                    if (reboquistaParaRenomear) {
+                        reboquistaParaRenomear.nome = nomeNovo;
                         eventoCard.dataset.reboquistas = JSON.stringify(reboquistas);
                         this.atualizarCard(eventoCard);
                     }
@@ -2043,6 +2113,7 @@ DOM.relatorioBrutoInput.value = '';
                 AppState.eventoIdCounter = estado.config?.eventoIdCounter || 0;
             }
         };
+
 
         const Config = {
             inicializar() {
