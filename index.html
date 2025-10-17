@@ -364,6 +364,21 @@
             <div class="grid-container">
                 <div class="grid-column">
                     <div class="painel flex-grow">
+                    <div class="painel-header">
+                        <h3><i class="fas fa-exclamation-circle"></i> Tipos de QRU</h3>
+                    </div>
+                    <div class="painel-body">
+                        <div class="add-item-form" style="flex-shrink: 0;">
+                            <input type="text" id="input-add-qru" placeholder="Nome do QRU...">
+                            <button id="btn-add-qru" class="btn btn-primario"><i class="fas fa-plus"></i></button>
+                        </div>
+                        <hr style="border-color: var(--color-border); margin: 16px 0; flex-shrink: 0;">
+                        <div class="config-list-container" id="lista-qrus"></div>
+                    </div>
+                </div>
+
+                    
+                    <div class="painel flex-grow">
                         <div class="painel-header"><h3><i class="fas fa-users"></i> Operadores</h3></div>
                         <div class="painel-body">
                             <div class="add-item-form" style="flex-shrink: 0;"><input type="text" id="input-add-operador" placeholder="Nome..."><button id="btn-add-operador" class="btn btn-primario"><i class="fas fa-plus"></i></button></div>
@@ -407,6 +422,7 @@
     <datalist id="lista-supervisores"></datalist>
     <datalist id="lista-monitores"></datalist>
     <datalist id="lista-locais-datalist"></datalist>
+    <datalist id="lista-qrus-datalist"></datalist>
     <datalist id="lista-turnos">
         <option value="MANHÃ"></option>
         <option value="TARDE"></option>
@@ -639,7 +655,7 @@
             eventoIdCounter: 0,
             draggedCard: null,
             placeholder: null,
-            dadosMestres: { operadores: [], supervisores: [], monitores: [], locais: [] },
+            dadosMestres: { operadores: [], supervisores: [], monitores: [], locais: [], qrus: [] },
             multiAcionamentoState: {
                 reboquistas: [],
                 eventoData: null,
@@ -694,13 +710,15 @@
                     operadores: document.getElementById('btn-add-operador'),
                     supervisores: document.getElementById('btn-add-supervisor'),
                     monitores: document.getElementById('btn-add-monitor'),
-                    locais: document.getElementById('btn-add-local')
+                    locais: document.getElementById('btn-add-local'),
+                    qrus: document.getElementById('btn-add-qru')
                 },
                 configInputs: {
                     operadores: document.getElementById('input-add-operador'),
                     supervisores: document.getElementById('input-add-supervisor'),
                     monitores: document.getElementById('input-add-monitor'),
-                    locais: document.getElementById('input-add-local')
+                    locais: document.getElementById('input-add-local'),
+                    qrus: document.getElementById('input-add-qru')
                 },
                 modalAcionamentoReboque: document.getElementById('modal-acionamento-reboque'),
                 reboqueAcionamentoCardId: document.getElementById('reboque-acionamento-card-id'),
@@ -868,26 +886,30 @@
         }
         
         function carregarDadosMestres() {
-            const dadosSalvos = localStorage.getItem(AppState.STORAGE_KEY_DADOS);
-            if (dadosSalvos) {
-                try {
-                    const dados = JSON.parse(dadosSalvos);
-                    AppState.dadosMestres.operadores = dados.operadores || [];
-                    AppState.dadosMestres.supervisores = dados.supervisores || [];
-                    AppState.dadosMestres.monitores = dados.monitores || [];
-                    AppState.dadosMestres.locais = dados.locais || [];
-                } catch {
-                    AppState.dadosMestres = { operadores: [], supervisores: [], monitores: [], locais: [] };
-                }
-            } else {
-                AppState.dadosMestres = {
-                    operadores: ["JAIRO LEITE", "THIAGO NOGUEIRA", "MÁRCIO"],
-                    supervisores: ["FRANCISCO HELDER", "MARCOS DANILO"],
-                    monitores: ["JOÃO PAULO ARRUDA", "THAYANE SOARES", "CRISTIANO MIRANDA"],
-                    locais: ["AV. DUQUE DE CAXIAS X AV. TRISTÃO GONÇALVES"]
-                };
-            }
+    const dadosSalvos = localStorage.getItem(AppState.STORAGE_KEY_DADOS);
+    if (dadosSalvos) {
+        try {
+            const dados = JSON.parse(dadosSalvos);
+            AppState.dadosMestres.operadores = dados.operadores || [];
+            AppState.dadosMestres.supervisores = dados.supervisores || [];
+            AppState.dadosMestres.monitores = dados.monitores || [];
+            AppState.dadosMestres.locais = dados.locais || [];
+            AppState.dadosMestres.qrus = dados.qrus || []; // <-- ADICIONE ESTA LINHA
+        } catch {
+            // Também adicione 'qrus' aqui para o caso de falha
+            AppState.dadosMestres = { operadores: [], supervisores: [], monitores: [], locais: [], qrus: [] };
         }
+    } else {
+        // Adicione 'qrus' aqui também, para os dados iniciais
+        AppState.dadosMestres = {
+            operadores: ["JAIRO LEITE", "THIAGO NOGUEIRA", "MÁRCIO"],
+            supervisores: ["FRANCISCO HELDER", "MARCOS DANILO"],
+            monitores: ["JOÃO PAULO ARRUDA", "THAYANE SOARES", "CRISTIANO MIRANDA"],
+            locais: ["AV. DUQUE DE CAXIAS X AV. TRISTÃO GONÇALVES"],
+            qrus: [] // <-- ADICIONE ESTA LINHA
+        };
+    }
+}
 
         const Semaforo = {
             inicializar() {
@@ -1299,7 +1321,7 @@ DOM.relatorioBrutoInput.value = '';
                 item.innerHTML = `
                     <button type="button" class="btn-remover"><i class="fas fa-times"></i></button>
                     <div class="form-grid">
-                        <div class="form-group"><label>QRU:</label><input type="text" class="turno-qru" value="${data.qru || ''}"></div>
+                        <div class="form-group"><label>QRU:</label><input type="text" class="turno-qru" list="lista-qrus-datalist" value="${data.qru || ''}"></div>
                         <div class="form-group"><label>QTH:</label><input type="text" class="turno-qth" list="lista-locais-datalist" value="${data.qth || ''}"></div>
                         <div class="form-group"><label>VT:</label><input type="text" class="turno-vt" value="${data.vt || ''}"></div>
                         <div class="form-group"><label>Equipe:</label><input type="text" class="turno-equipe" list="lista-operadores-datalist" value="${data.equipe || ''}"></div>
@@ -2182,7 +2204,8 @@ gerarRelatorioFrota() {
                     operadores: 'lista-operadores',
                     supervisores: 'lista-supervisores-config',
                     monitores: 'lista-monitores-config',
-                    locais: 'lista-locais'
+                    locais: 'lista-locais',
+                    qrus: 'lista-qrus'
                 };
                 const container = document.getElementById(containerIdMap[type]);
                 if (!container) return;
@@ -2208,7 +2231,8 @@ gerarRelatorioFrota() {
                     operadores: 'lista-operadores-datalist',
                     supervisores: 'lista-supervisores',
                     monitores: 'lista-monitores',
-                    locais: 'lista-locais-datalist'
+                    locais: 'lista-locais-datalist',
+                    qrus: 'lista-qrus-datalist'
                 };
                 const datalist = document.getElementById(datalistIdMap[type]);
                 if (datalist) {
