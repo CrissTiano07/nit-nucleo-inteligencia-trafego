@@ -161,6 +161,51 @@
         margin-left: 8px;
     }
 
+       /* Colore os cards dentro da coluna DISPONÍVEIS */
+#reboques-disponiveis .reboque-card {
+    background-color: rgba(22, 163, 74, 0.1); /* Fundo verde com 10% de opacidade */
+    border-left: 4px solid var(--color-success); /* Adiciona uma borda lateral verde para mais destaque */
+}
+
+/* Colore os cards dentro da coluna ATUANDO */
+#reboques-atuando .reboque-card {
+    background-color: rgba(202, 138, 4, 0.1); /* Fundo amarelo com 10% de opacidade */
+    border-left: 4px solid var(--color-warning); /* Adiciona uma borda lateral amarela para mais destaque */
+}
+
+    /* --- Coloração dos Cards do Kanban Semafórico --- */
+
+/* Cards na coluna AGUARDANDO ATENDIMENTO */
+#coluna-espera .kanban-card {
+    background-color: rgba(220, 38, 38, 0.08); /* Fundo vermelho (--color-danger) com 8% de opacidade */
+    border-left: 4px solid var(--color-danger);
+}
+
+/* Cards na coluna VIA LIVRE */
+#coluna-vl .kanban-card {
+    background-color: rgba(202, 138, 4, 0.1); /* Fundo amarelo (--color-warning) com 10% de opacidade */
+    border-left: 4px solid var(--color-warning);
+}
+
+/* Cards na coluna AMC */
+#coluna-amc .kanban-card {
+    background-color: rgba(22, 163, 74, 0.1); /* Fundo verde (--color-success) com 10% de opacidade */
+    border-left: 4px solid var(--color-success);
+}
+
+/* Cards na coluna SEM NECESSIDADE (cor neutra) */
+#coluna-sem-necessidade .kanban-card {
+    background-color: rgba(100, 116, 139, 0.08); /* Fundo cinza (--color-text-tertiary) com 8% de opacidade */
+    border-left: 4px solid var(--color-text-tertiary);
+}
+
+/* Opcional: Efeito de hover mais sutil para não brigar com as cores de fundo */
+.kanban-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    border-color: var(--color-primary); /* Destaca a borda geral com a cor primária ao passar o mouse */
+}
+
 
     </style>
 </head>
@@ -168,13 +213,53 @@
 
     <div class="main-container">
         <div class="tab-navigation">
-            <button class="tab-button active" data-tab="tab-semaforo"><i class="fas fa-traffic-light"></i> Relatório Semafórico</button>
             <button class="tab-button" data-tab="tab-turno"><i class="fas fa-user-clock"></i> Relatório de Turno</button>
+            <button class="tab-button active" data-tab="tab-semaforo"><i class="fas fa-traffic-light"></i> Relatório Semafórico</button>
             <button class="tab-button" data-tab="tab-reboques"><i class="fas fa-truck-pickup"></i> Reboques</button>
             <button class="tab-button" data-tab="tab-config"><i class="fas fa-cogs"></i> Configurações</button>
             <div class="tab-controls">
                 <button id="theme-toggle" class="btn-icon" title="Alternar Tema"><i class="fas fa-moon"></i><i class="fas fa-sun"></i></button>
                 <button id="btn-limpar-painel" class="btn-icon" title="Limpar todo o painel"><i class="fas fa-trash-alt" style="color: var(--color-danger);"></i></button>
+            </div>
+        </div>
+
+        <div id="tab-turno" class="tab-content">
+            <div class="grid-container">
+                <div class="grid-column">
+                    <div class="painel">
+                        <div class="painel-header"><h3><i class="fas fa-edit"></i> Dados do Turno</h3></div>
+                        <div class="painel-body">
+                            <div class="form-grid">
+                                <div class="form-group"><label>Turno:</label><select
+ id="turno-turno"><option value="MANHÃ">MANHÃ</option><option value="TARDE">TARDE</option><option value="NOITE">NOITE</option></select></div>
+                                <div class="form-group"><label>Data:</label><input type="date" id="turno-data"></div>
+                                <div class="form-group"><label>Total de Agentes:</label><input type="number" id="turno-totalAgentes" min="1"></div>
+                                <div class="form-group"><label>Monitor:</label><input type="text" id="turno-monitor" list="lista-monitores"></div>
+                                <div class="form-group"><label>Supervisor:</label><input type="text" id="turno-supervisor" list="lista-supervisores"></div>
+                                <div class="form-group"><label>VLVT:</label><input type="text" id="turno-vlvt"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="painel flex-grow">
+                        <div class="painel-header"><h3><i class="fas fa-plus-circle"></i> Ocorrências</h3></div>
+                        <div class="painel-body">
+                            <button id="btn-add-ocorrencia" class="btn btn-secundario" style="width: 100%; flex-shrink: 0;"><i class="fas fa-plus"></i> Adicionar Ocorrência</button>
+                            <div id="turno-ocorrencias-container" style="flex-grow: 1; overflow-y: auto; padding: 4px;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid-column">
+                    <div class="painel flex-grow">
+                        <div class="painel-header"><h3><i class="fas fa-file-alt"></i> Relatório de Turno</h3></div>
+                        <div class="painel-body">
+                            <textarea id="saida-turno" readonly placeholder="O relatório de turno aparecerá aqui..."></textarea>
+                            <div style="display: flex; gap: 8px; flex-shrink: 0;">
+                                <button id="btn-gerar-relatorio-turno" class="btn btn-primario" style="flex: 1;"><i class="fas fa-cogs"></i> Gerar Relatório</button>
+                                <button id="btn-copiar-relatorio-turno" class="btn btn-secundario" style="flex: 1;"><i class="fas fa-copy"></i> Copiar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -251,46 +336,7 @@
             </div>
         </div>
 
-        <div id="tab-turno" class="tab-content">
-            <div class="grid-container">
-                <div class="grid-column">
-                    <div class="painel">
-                        <div class="painel-header"><h3><i class="fas fa-edit"></i> Dados do Turno</h3></div>
-                        <div class="painel-body">
-                            <div class="form-grid">
-                                <div class="form-group"><label>Turno:</label><select
- id="turno-turno"><option value="MANHÃ">MANHÃ</option><option value="TARDE">TARDE</option><option value="NOITE">NOITE</option></select></div>
-                                <div class="form-group"><label>Data:</label><input type="date" id="turno-data"></div>
-                                <div class="form-group"><label>Total de Agentes:</label><input type="number" id="turno-totalAgentes" min="1"></div>
-                                <div class="form-group"><label>Monitor:</label><input type="text" id="turno-monitor" list="lista-monitores"></div>
-                                <div class="form-group"><label>Supervisor:</label><input type="text" id="turno-supervisor" list="lista-supervisores"></div>
-                                <div class="form-group"><label>VLVT:</label><input type="text" id="turno-vlvt"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="painel flex-grow">
-                        <div class="painel-header"><h3><i class="fas fa-plus-circle"></i> Ocorrências</h3></div>
-                        <div class="painel-body">
-                            <button id="btn-add-ocorrencia" class="btn btn-secundario" style="width: 100%; flex-shrink: 0;"><i class="fas fa-plus"></i> Adicionar Ocorrência</button>
-                            <div id="turno-ocorrencias-container" style="flex-grow: 1; overflow-y: auto; padding: 4px;"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="grid-column">
-                    <div class="painel flex-grow">
-                        <div class="painel-header"><h3><i class="fas fa-file-alt"></i> Relatório de Turno</h3></div>
-                        <div class="painel-body">
-                            <textarea id="saida-turno" readonly placeholder="O relatório de turno aparecerá aqui..."></textarea>
-                            <div style="display: flex; gap: 8px; flex-shrink: 0;">
-                                <button id="btn-gerar-relatorio-turno" class="btn btn-primario" style="flex: 1;"><i class="fas fa-cogs"></i> Gerar Relatório</button>
-                                <button id="btn-copiar-relatorio-turno" class="btn btn-secundario" style="flex: 1;"><i class="fas fa-copy"></i> Copiar</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
+        
         <div id="tab-reboques" class="tab-content">
             <div class="grid-container reboques-main-grid">
                 <div class="grid-column">
@@ -782,7 +828,23 @@
             queryDOM();
             carregarDadosMestres();
 
-            
+            // PASSO 1: Remove a classe 'active' de todos os botões e conteúdos.
+            // Isso garante que estamos começando de um estado "limpo".
+            DOM.tabButtons.forEach(b => b.classList.remove('active'));
+            DOM.tabContents.forEach(c => c.classList.remove('active'));
+
+            // PASSO 2: Decide qual aba ativar.
+            const ultimaAba = localStorage.getItem('ultimaAbaAtiva');
+            const abaPadrao = 'tab-turno'; // Define a aba padrão explicitamente aqui.
+
+            if (ultimaAba && document.getElementById(ultimaAba)) {
+                // Se uma última aba foi salva e ela existe, ative-a.
+                switchTab(ultimaAba);
+            } else {
+                // Senão, ativa a aba padrão definida.
+                switchTab(abaPadrao);
+            }
+
             
             const currentTheme = localStorage.getItem('theme') || 'dark';
             document.body.setAttribute('data-theme', currentTheme);
@@ -821,7 +883,7 @@
             DOM.tabButtons.forEach(button => button.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
             document.querySelector(`.tab-button[data-tab="${tabId}"]`).classList.add('active');
-            
+            localStorage.setItem('ultimaAbaAtiva', tabId);
         }
 
         function toggleTheme() {
@@ -1615,7 +1677,7 @@ DOM.relatorioBrutoInput.value = '';
 
                 showToast('Arraste outro reboquista para a área de tags ou finalize o acionamento.', 'info');
             },
-            handleFinalizarAcionamentoMultiplo() {
+                        handleFinalizarAcionamentoMultiplo() {
                 const { reboquistas, eventoData } = AppState.multiAcionamentoState;
                 if (reboquistas.length === 0) {
                     showToast('Nenhum reboquista foi acionado.', 'error');
@@ -1640,11 +1702,22 @@ DOM.relatorioBrutoInput.value = '';
                     vt: card.dataset.vt
                 }));
 
+                // PASSO 1: Cria o evento. A função retorna o elemento do card criado.
                 const eventoCard = Eventos.adicionarEvento(finalEventoData);
                 
+                // ================== INÍCIO DA CORREÇÃO ==================
+                
+                // PASSO 2: Atualiza os cards dos reboquistas e os move para a coluna "Atuando".
+                // Removemos a chamada desnecessária para Eventos.alocarReboquistaAoEvento.
                 reboquistas.forEach(reboquistaCard => {
-                    Eventos.alocarReboquistaAoEvento(reboquistaCard, eventoCard, true);
+                    reboquistaCard.dataset.status = 'atuando';
+                    reboquistaCard.dataset.ocorrencia = `${finalEventoData.tipo} @ ${finalEventoData.endereco}`;
+                    reboquistaCard.dataset.eventoId = eventoCard.id; // <-- A LINHA CRUCIAL AGORA É EXECUTADA!
+                    this.atualizarCard(reboquistaCard);
+                    DOM.reboquesAtuandoContainer.appendChild(reboquistaCard);
                 });
+                
+                // =================== FIM DA CORREÇÃO ====================
 
                 const nomes = reboquistas.map(r => r.dataset.nome).join(', ');
                 let mensagem = `*${finalEventoData.tipo}* enviado para: *${nomes}*\n` +
@@ -1657,13 +1730,16 @@ DOM.relatorioBrutoInput.value = '';
 
                 fecharModal(DOM.modalAcionamentoReboque);
                 this.resetarModalAcionamento();
+                this.atualizarPainel(); // Garante que os contadores sejam atualizados
             },
+
             finalizarAcionamento(card) {
                 const nomeReboquista = card.dataset.nome;
                 Eventos.desalocarReboquistaDeEvento(nomeReboquista);
 
                 card.dataset.status = 'disponivel';
                 card.dataset.ocorrencia = '';
+                card.dataset.eventoId = ''; // <-- LIMPA O ID DO EVENTO
                 this.atualizarCard(card);
                 DOM.reboquesDisponiveisContainer.appendChild(card);
                 this.atualizarPainel();
@@ -1813,19 +1889,32 @@ gerarRelatorioFrota() {
              `- 🚛 *Total:* ${disponiveis.length + atuando.length}\n\n`;
 
     if (atuando.length > 0) {
-        texto += `---\n\n🟡 *OCORRÊNCIAS EM ATENDIMENTO (${atuando.length}):*\n\n`;
-
-        // PASSO 1: Agrupar reboquistas por evento
         const eventosAgrupados = {};
         atuando.forEach(card => {
-            const evento = card.dataset.ocorrencia ? card.dataset.ocorrencia.split(' @ ')[0].toUpperCase() : 'EVENTO NÃO ESPECIFICADO';
-            if (!eventosAgrupados[evento]) {
-                eventosAgrupados[evento] = [];
+            let tituloEvento;
+            
+            // ================== INÍCIO DA CORREÇÃO ==================
+            // Tenta usar o método novo e mais robusto (Plano A)
+            const eventoId = card.dataset.eventoId;
+            if (eventoId) {
+                const eventoCard = document.getElementById(eventoId);
+                tituloEvento = eventoCard ? eventoCard.dataset.tipo : 'EVENTO NÃO ENCONTRADO';
+            } else {
+                // Se o eventoId não existir (dados antigos), usa o método antigo como fallback (Plano B)
+                tituloEvento = card.dataset.ocorrencia ? card.dataset.ocorrencia.split(' @ ')[0].toUpperCase() : 'EVENTO NÃO ESPECIFICADO';
             }
-            eventosAgrupados[evento].push(card);
+            // =================== FIM DA CORREÇÃO ====================
+
+            if (!eventosAgrupados[tituloEvento]) {
+                eventosAgrupados[tituloEvento] = [];
+            }
+            eventosAgrupados[tituloEvento].push(card);
         });
 
-        // PASSO 2: Gerar o texto a partir dos dados agrupados
+        const numeroDeEventosUnicos = Object.keys(eventosAgrupados).length;
+
+        texto += `---\n\n🟡 *OCORRÊNCIAS EM ATENDIMENTO (${numeroDeEventosUnicos}):*\n\n`;
+        
         for (const evento in eventosAgrupados) {
             texto += `*${evento}*\n`;
             eventosAgrupados[evento].forEach(card => {
@@ -1838,10 +1927,10 @@ gerarRelatorioFrota() {
         texto += `---\n\n*Todos os reboquistas estão disponíveis.*`;
     }
 
-    // Reutiliza o modal de relatório semafórico para exibir o texto
     DOM.modalRelatorioTexto.value = texto.trim();
     abrirModal(DOM.modalRelatorio);
-}
+},
+
 
 
 
@@ -1924,7 +2013,7 @@ gerarRelatorioFrota() {
                             <button class="btn-card-action edit-evento" title="Editar Evento"><i class="fas fa-pencil-alt"></i></button>
                             <button class="btn-card-action report-evento" title="Copiar Relatório do Evento"><i class="fab fa-whatsapp"></i></button>
                             <button class="btn-card-action finalizar-evento" title="Finalizar Evento"><i class="fas fa-check-circle" style="color: var(--color-success);"></i></button>
-                            <button class="btn-card-action remover-evento" title="Remover Evento"><i class="fas fa-trash-alt" style="color: var(--color-danger);"></i></button>
+                            <button class="btn-card-action remover-evento" title="Cancelar Evento"><i class="fas fa-ban" style="color: var(--color-danger);"></i></button>
                         </div>
                     </div>
                 `;
@@ -1976,28 +2065,43 @@ gerarRelatorioFrota() {
                 const novoHTML = this.criarCardEvento(eventoCard.id, cardData).innerHTML;
                 eventoCard.innerHTML = novoHTML;
             },
-                            copiarRelatorio(eventoCard) {
-                // Prepara o texto para o WhatsApp, usando %0A para quebras de linha
-                let relatorio = `*Tem preferência de reboquista para este evento?*%0A%0A`; // <-- TÍTULO ALTERADO
-                relatorio += `*Evento:* ${eventoCard.dataset.tipo}%0A`;
-                relatorio += `*Endereço:* ${eventoCard.dataset.endereco}%0A`;
-                if (eventoCard.dataset.horario) {
-                    relatorio += `*Horário:* ${eventoCard.dataset.horario}%0A`;
-                }
-                if (eventoCard.dataset.obs) {
-                    relatorio += `*Obs:* ${eventoCard.dataset.obs}%0A`;
+                        copiarRelatorio(eventoCard) {
+                const reboquistas = JSON.parse(eventoCard.dataset.reboquistas || '[]');
+                let textoFinal = '';
+                let toastMessage = '';
+
+                if (reboquistas.length > 0) {
+                    // CENÁRIO 1: Já existem reboquistas alocados. Gera a mensagem de acionamento.
+                    const nomes = reboquistas.map(r => r.nome).join(', ');
+                    textoFinal = `*${eventoCard.dataset.tipo}* enviado para: *${nomes}*\n\n` +
+                                 `*Endereço:* ${eventoCard.dataset.endereco}`;
+                    
+                    if (eventoCard.dataset.horario) textoFinal += `\n*Horário:* ${eventoCard.dataset.horario}`;
+                    if (eventoCard.dataset.obs) textoFinal += `\n*Obs:* ${eventoCard.dataset.obs}`;
+
+                    toastMessage = 'Mensagem de acionamento copiada!';
+
+                } else {
+                    // CENÁRIO 2: Nenhum reboquista alocado. Gera a pergunta de indicação.
+                    textoFinal = `*Tem preferência de reboquista para este evento?*\n\n` +
+                                 `*Evento:* ${eventoCard.dataset.tipo}\n` +
+                                 `*Endereço:* ${eventoCard.dataset.endereco}`;
+                    
+                    if (eventoCard.dataset.horario) textoFinal += `\n*Horário:* ${eventoCard.dataset.horario}`;
+                    if (eventoCard.dataset.obs) textoFinal += `\n*Obs:* ${eventoCard.dataset.obs}`;
+                    
+                    toastMessage = 'Solicitação de indicação copiada!';
                 }
 
-                // Decodifica o texto para a área de transferência (converte %0A para \n)
-                const textoParaClipboard = decodeURIComponent(relatorio.trim());
-
-                navigator.clipboard.writeText(textoParaClipboard).then(() => {
-                    showToast('Solicitação de indicação copiada!', 'success'); // <-- Mensagem de feedback também ajustada
+                // Remove espaços extras e copia para a área de transferência
+                navigator.clipboard.writeText(textoFinal.trim()).then(() => {
+                    showToast(toastMessage, 'success');
                 });
             },
 
 
-                          finalizarEvento(eventoElement) {
+
+                finalizarEvento(eventoElement) {
                 const reboquistasNoEvento = JSON.parse(eventoElement.dataset.reboquistas || '[]');
                 const nomesDosReboquistas = reboquistasNoEvento.map(r => r.nome); // Pega apenas os nomes
 
@@ -2023,13 +2127,44 @@ gerarRelatorioFrota() {
                 showToast(`Evento finalizado! ${nomesDosReboquistas.length} reboquista(s) liberado(s).`, 'success');
             },
 
-            removerEvento(eventoElement) {
-                if (confirm('Tem certeza que deseja remover este evento? Esta ação não libera os reboquistas.')) {
+                removerEvento(eventoElement) {
+                // Altera a mensagem para refletir o novo comportamento
+                if (confirm('Tem certeza que deseja CANCELAR este evento? Os reboquistas alocados serão liberados.')) {
+
+                    
+                    // Pega a lista de reboquistas do evento que será removido
+                    const reboquistasNoEvento = JSON.parse(eventoElement.dataset.reboquistas || '[]');
+                    const nomesDosReboquistas = reboquistasNoEvento.map(r => r.nome);
+
+                    if (nomesDosReboquistas.length > 0) {
+                        // Encontra todos os cards de reboquistas que estão na coluna "Atuando"
+                        const reboquistasAtuando = document.querySelectorAll('#reboques-atuando .reboque-card');
+
+                        reboquistasAtuando.forEach(reboquistaCard => {
+                            // Se o reboquista pertence ao evento que está sendo removido...
+                            if (nomesDosReboquistas.includes(reboquistaCard.dataset.nome)) {
+                                // ...libera ele.
+                                reboquistaCard.dataset.status = 'disponivel';
+                                reboquistaCard.dataset.ocorrencia = '';
+                                reboquistaCard.dataset.eventoId = ''; // Limpa o ID do evento
+                                Reboques.atualizarCard(reboquistaCard);
+                                DOM.reboquesDisponiveisContainer.appendChild(reboquistaCard);
+                            }
+                        });
+                    }
+                    
+                    // Remove o card do evento
                     eventoElement.remove();
+                    
+                    // Atualiza os painéis e salva o estado
+                    Reboques.atualizarPainel();
                     this.salvarEstado();
-                    showToast('Evento removido.', 'warning');
+                    
+                    // Mostra uma mensagem de sucesso
+                    showToast('Evento removido e reboquistas liberados!', 'success');
                 }
             },
+
             alocarReboquistaAoEvento(reboquistaCard, eventoCard, fromModal = false) {
                 if (reboquistaCard.dataset.status === 'atuando' && !fromModal) {
                     showToast(`${reboquistaCard.dataset.nome} já está em atendimento.`, 'error');
@@ -2054,18 +2189,15 @@ gerarRelatorioFrota() {
                 
                 reboquistaCard.dataset.status = 'atuando';
                 reboquistaCard.dataset.ocorrencia = `${tipoEvento} @ ${endereco}`;
+                 reboquistaCard.dataset.eventoId = eventoCard.id; // <-- ADICIONA O ID DO EVENTO AO REBOQUISTA
+
                 Reboques.atualizarCard(reboquistaCard);
                 DOM.reboquesAtuandoContainer.appendChild(reboquistaCard);
                 
                 if (!fromModal) {
-                    let mensagem = `*${tipoEvento}* enviado para: *${nomeReboquista}*\n` +
-                                   `*Endereço:* ${endereco}`;
-                    if (eventoCard.dataset.horario) mensagem += `\n*Horário:* ${eventoCard.dataset.horario}`;
-                    
-                    navigator.clipboard.writeText(mensagem);
-                    showToast(`${nomeReboquista} acionado! Mensagem copiada.`, 'success');
+                    showToast(`${nomeReboquista} alocado ao evento!`, 'success');
                 }
-                
+
                 Reboques.atualizarPainel();
                 this.salvarEstado();
             },
