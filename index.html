@@ -992,7 +992,6 @@
                 kanbanArea.addEventListener('drop', this.handleDrop.bind(this));
                 kanbanArea.addEventListener('click', this.handleKanbanBoardClick.bind(this));
             },
-            // SUBSTITUA A FUNÇÃO handleProcessarClick INTEIRA POR ESTA:
 
     handleProcessarClick() {
     const textoBruto = DOM.relatorioBrutoInput.value;
@@ -1001,90 +1000,45 @@
         return;
     }
 
-    // Modo de Carga Inicial
-    if (/NORMALIZADOS✅/i.test(textoBruto)) {
-        document.querySelectorAll('#tab-semaforo .kanban-card').forEach(card => card.remove());
-        AppState.totalOcorrenciasCriadas = 0;
-        AppState.cardIdCounter = 0;
+    document.querySelectorAll('#tab-semaforo .kanban-card').forEach(card => card.remove());
+    AppState.totalOcorrenciasCriadas = 0;
+    AppState.cardIdCounter = 0;
 
-        const secoes = textoBruto.split(/NORMALIZADOS✅/i);
-        const textoPendentes = secoes[0];
-        const textoNormalizados = secoes.length > 1 ? secoes[1] : '';
+    let textoPendentes = textoBruto;
+    let textoNormalizados = '';
 
-        const processarSecao = (texto, destinoContainer) => {
-            if (!texto) return;
-            const linhas = texto.split('\n');
-            linhas.forEach(linha => {
-                const cardData = this.extrairDadosDoBloco(linha);
-                if (cardData) {
-                    // Na carga inicial, PERMITIMOS a criação de cards com o mesmo código
-                    // pois eles podem estar em seções diferentes.
-                    const cardId = `card-${AppState.cardIdCounter++}`;
-                    const cardElement = this.criarElementoCard(cardId, cardData);
-                    destinoContainer.appendChild(cardElement);
-                    AppState.totalOcorrenciasCriadas++;
-                }
-            });
-        };
+    const divisor = /NORMALIZADOS(✅|:|\s*SIM)?\s*\n/i;
 
-        processarSecao(textoPendentes, document.querySelector('#coluna-espera .kanban-cards-container'));
-        processarSecao(textoNormalizados, DOM.colunaNormalizados);
 
-    // ... (início da função handleProcessarClick)
-} else {
-    // Modo Incremental: Processa linha a linha sem limpar o painel.
-    const linhas = textoBruto.split('\n');
-    let sucessos = 0;
-    let bloqueados = [];
+    if (divisor.test(textoBruto)) {
+        const partes = textoBruto.split(divisor);
+        textoPendentes = partes[0];
+        textoNormalizados = partes[1];
 
-    linhas.forEach(linha => {
-        const cardData = this.extrairDadosDoBloco(linha);
-        if (!cardData) return;
+       
+       
+    }
 
-        const cardExistente = document.querySelector(`.kanban-card[data-codigo='${cardData.codigo}']`);
-        if (cardExistente) {
-            const isAtivo = cardExistente.closest('.kanban-cards-container').id !== 'coluna-normalizados';
-            if (isAtivo) {
-                // BLOQUEADO: Adiciona à lista para notificação posterior.
-                bloqueados.push(cardData.codigo);
-            } else { // É reincidência
+    const processarSecao = (texto, destinoContainer) => {
+        if (!texto) return;
+        const linhas = texto.split('\n');
+        linhas.forEach(linha => {
+            const cardData = this.extrairDadosDoBloco(linha);
+            if (cardData) {
+       
                 const cardId = `card-${AppState.cardIdCounter++}`;
                 const cardElement = this.criarElementoCard(cardId, cardData);
-                document.querySelector('#coluna-espera .kanban-cards-container').appendChild(cardElement);
+                destinoContainer.appendChild(cardElement);
                 AppState.totalOcorrenciasCriadas++;
-                sucessos++;
             }
-        } else { // Card totalmente novo
-            const cardId = `card-${AppState.cardIdCounter++}`;
-            const cardElement = this.criarElementoCard(cardId, cardData);
-            document.querySelector('#coluna-espera .kanban-cards-container').appendChild(cardElement);
-            AppState.totalOcorrenciasCriadas++;
-            sucessos++;
-        }
-    });
+        });
+    };
 
-    // Lógica de feedback para o Modo Incremental
-    let mensagemFinal = '';
-    if (sucessos > 0) {
-        mensagemFinal += `${sucessos} nova(s) ocorrência(s) adicionada(s).`;
-    }
-    if (bloqueados.length > 0) {
-        if (mensagemFinal) mensagemFinal += ' ';
-        mensagemFinal += `${bloqueados.length} ocorrência(s) ignorada(s) por já estarem ativas: ${bloqueados.join(', ')}. Normalize a ocorrência existente para poder adicionar uma nova.`;
-    }
+   
 
-    if (mensagemFinal) {
-        // Usa um toast de aviso se houve bloqueios, para chamar a atenção.
-        const toastType = bloqueados.length > 0 ? 'warning' : 'success';
-        showToast(mensagemFinal, toastType, 7000); // 7 segundos para dar tempo de ler a mensagem completa.
-    } else if (textoBruto) {
-        showToast('Nenhuma ocorrência válida encontrada no texto.', 'warning');
-    }
-}
-
-this.atualizarPainel();
-// A linha do showToast que estava aqui foi movida para dentro dos blocos if/else.
-DOM.relatorioBrutoInput.value = '';
+    this.atualizarPainel();
+    DOM.relatorioBrutoInput.value = '';
+    showToast(`${AppState.totalOcorrenciasCriadas} ocorrências processadas.`, 'success');
 },
 
 
