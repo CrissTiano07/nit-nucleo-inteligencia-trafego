@@ -207,6 +207,29 @@
 }
 
 
+/* CSS para destacar o card que foi normalizado */
+.card-foi-normalizado {
+    animation: pulso-verde 2s ease-in-out 2; /* A animação dura 2s e repete 2 vezes */
+    border-color: var(--color-success) !important;
+}
+
+@keyframes pulso-verde {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-success) 50%, transparent);
+    }
+    70% {
+        transform: scale(1.02);
+        box-shadow: 0 0 0 10px color-mix(in srgb, var(--color-success) 0%, transparent);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-success) 0%, transparent);
+    }
+}
+
+
+
     </style>
 </head>
 <body>
@@ -1064,7 +1087,7 @@
                 kanbanArea.addEventListener('click', this.handleKanbanBoardClick.bind(this));
             },
 
-                          handleProcessarClick() {
+                handleProcessarClick() {
                 const textoBruto = DOM.relatorioBrutoInput.value;
                 if (!textoBruto) {
                     showToast('Insira o relatório bruto para processar.', 'warning');
