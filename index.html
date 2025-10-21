@@ -219,6 +219,7 @@
             <button class="tab-button" data-tab="tab-config"><i class="fas fa-cogs"></i> Configurações</button>
             <div class="tab-controls">
                 <button id="theme-toggle" class="btn-icon" title="Alternar Tema"><i class="fas fa-moon"></i><i class="fas fa-sun"></i></button>
+                <button id="btn-ver-historico" class="btn-icon" title="Ver Histórico de Ações"><i class="fas fa-history"></i></button>
                 <button id="btn-limpar-painel" class="btn-icon" title="Limpar todo o painel"><i class="fas fa-trash-alt" style="color: var(--color-danger);"></i></button>
             </div>
         </div>
@@ -683,7 +684,24 @@
         </div>
     </div>
 
+    <!-- NOVO MODAL DE HISTÓRICO ABAIXO -->
+    <div id="modal-historico" class="modal-overlay">
+        <div class="modal-container" style="max-width: 800px;">
+            <div class="modal-header">Histórico de Ações</div>
+            <div class="modal-body" id="historico-body" style="max-height: 70vh; overflow-y: auto;">
+                <!-- O conteúdo do log será inserido aqui pelo JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button id="btn-historico-fechar" class="btn btn-secundario">Fechar</button>
+            </div>
+        </div>
+    </div>
+
     <div id="toast-container"></div>
+
+    <div id="toast-container"></div>
+
+    
 
     <script>
     (function() {
@@ -874,8 +892,36 @@
             setupModal(DOM.modalDespachoSemaforo, DOM.btnDespachoSemaforoCancelar);
             setupModal(DOM.modalEdicaoEvento, DOM.btnEventoEditCancelar);
 
-            showToast('Sistema v9.1 carregado com sucesso!', 'success');
+              // LÓGICA PARA CONTROLAR O MODAL DE HISTÓRICO
+        const btnVerHistorico = document.getElementById('btn-ver-historico');
+        const modalHistorico = document.getElementById('modal-historico');
+        const historicoBody = document.getElementById('historico-body');
+        
+        if (btnVerHistorico && modalHistorico) { // Verifica se os elementos existem
+            btnVerHistorico.addEventListener('click', () => {
+                // Carrega e exibe os logs ao abrir o modal
+                const logs = JSON.parse(localStorage.getItem('historicoDeAcoes_v1')) || [];
+                if (logs.length > 0) {
+                    historicoBody.innerHTML = logs.map(log => 
+                        `<div class="config-list-item">
+                            <span style="color: var(--color-text-tertiary); min-width: 160px; flex-shrink: 0;">${log.timestamp}</span>
+                            <span style="margin-left: 16px;">${log.mensagem}</span>
+                        </div>`
+                    ).join('');
+                } else {
+                    historicoBody.innerHTML = '<p>Nenhuma ação registrada ainda.</p>';
+                }
+                abrirModal(modalHistorico);
+            });
+
+            setupModal(modalHistorico, document.getElementById('btn-historico-fechar'));
         }
+
+        showToast('Sistema v9.1 carregado com sucesso!', 'success');
+    }
+
+          
+        
 
         function switchTab(tabId) {
             if (!document.getElementById(tabId)) return;
@@ -946,6 +992,30 @@
                 });
             }
         }
+
+                // ... logo após a função setupModal()
+
+        function registrarAcao(mensagem) {
+            const agora = new Date();
+            // Formato do timestamp: DD/MM/AAAA, HH:MM:SS
+            const timestamp = agora.toLocaleString('pt-BR');
+            const logEntry = { timestamp, mensagem };
+
+            // Carrega os logs existentes do localStorage
+            let logs = JSON.parse(localStorage.getItem('historicoDeAcoes_v1')) || [];
+            
+            // Adiciona a nova entrada no início da lista (mais recente primeiro)
+            logs.unshift(logEntry);
+
+            // Limita o histórico para os últimos 500 eventos para não sobrecarregar
+            if (logs.length > 500) {
+                logs = logs.slice(0, 500);
+            }
+
+            // Salva a lista de logs atualizada de volta no localStorage
+            localStorage.setItem('historicoDeAcoes_v1', JSON.stringify(logs));
+        }
+
         
         function carregarDadosMestres() {
     const dadosSalvos = localStorage.getItem(AppState.STORAGE_KEY_DADOS);
@@ -973,7 +1043,7 @@
     }
 }
 
-        const Semaforo = {
+                const Semaforo = {
             inicializar() {
                 this.carregarEstado();
                 DOM.btnEdicaoSalvar.addEventListener('click', this.handleSalvarEdicaoClick.bind(this));
@@ -984,6 +1054,7 @@
                 DOM.btnModalCopiar.addEventListener('click', this.handleCopiarModalClick.bind(this));
                 DOM.btnToggleArquivados.addEventListener('click', (e) => { e.stopPropagation(); this.toggleGaveta(); });
                 document.addEventListener('click', (e) => { if (DOM.gavetaArquivados.classList.contains('open') && !DOM.gavetaArquivados.contains(e.target) && !DOM.btnToggleArquivados.contains(e.target)) { this.toggleGaveta(false); } });
+                
                 const kanbanArea = document.querySelector('#tab-semaforo');
                 kanbanArea.addEventListener('dragstart', this.handleDragStart.bind(this));
                 kanbanArea.addEventListener('dragend', this.handleDragEnd.bind(this));
@@ -993,53 +1064,52 @@
                 kanbanArea.addEventListener('click', this.handleKanbanBoardClick.bind(this));
             },
 
-    handleProcessarClick() {
-    const textoBruto = DOM.relatorioBrutoInput.value;
-    if (!textoBruto) {
-        showToast('Insira o relatório bruto para processar.', 'warning');
-        return;
-    }
+                          handleProcessarClick() {
+                const textoBruto = DOM.relatorioBrutoInput.value;
+                if (!textoBruto) {
+                    showToast('Insira o relatório bruto para processar.', 'warning');
+                    return;
+                }
 
-    document.querySelectorAll('#tab-semaforo .kanban-card').forEach(card => card.remove());
-    AppState.totalOcorrenciasCriadas = 0;
-    AppState.cardIdCounter = 0;
+                // 1. Mapeia os cards que já existem no painel.
+                const cardsExistentes = new Map();
+                document.querySelectorAll('#tab-semaforo .kanban-card').forEach(card => {
+                    cardsExistentes.set(card.dataset.codigo, card);
+                });
 
-    let textoPendentes = textoBruto;
-    let textoNormalizados = '';
+                // 2. Processa o texto linha por linha.
+                const linhas = textoBruto.split('\n');
+                let novosCardsAdicionados = 0;
 
-    const divisor = /NORMALIZADOS(✅|:|\s*SIM)?\s*\n/i;
+                linhas.forEach(linha => {
+                    const cardData = this.extrairDadosDoBloco(linha);
 
+                    // Se a linha é válida E o card ainda não existe no painel...
+                    if (cardData && !cardsExistentes.has(cardData.codigo)) {
+                        
+                        // ...cria o novo card.
+                        const cardId = `card-${AppState.cardIdCounter++}`;
+                        const cardElement = this.criarElementoCard(cardId, cardData);
+                        
+                        // Adiciona na coluna "Aguardando" por padrão.
+                        document.querySelector('#coluna-espera .kanban-cards-container').appendChild(cardElement);
+                        
+                        novosCardsAdicionados++;
+                        AppState.totalOcorrenciasCriadas++;
+                    }
+                });
 
-    if (divisor.test(textoBruto)) {
-        const partes = textoBruto.split(divisor);
-        textoPendentes = partes[0];
-        textoNormalizados = partes[1];
+                // 3. Finaliza e atualiza.
+                this.atualizarPainel();
+                DOM.relatorioBrutoInput.value = '';
 
-       
-       
-    }
-
-    const processarSecao = (texto, destinoContainer) => {
-        if (!texto) return;
-        const linhas = texto.split('\n');
-        linhas.forEach(linha => {
-            const cardData = this.extrairDadosDoBloco(linha);
-            if (cardData) {
-       
-                const cardId = `card-${AppState.cardIdCounter++}`;
-                const cardElement = this.criarElementoCard(cardId, cardData);
-                destinoContainer.appendChild(cardElement);
-                AppState.totalOcorrenciasCriadas++;
-            }
-        });
-    };
-
-   
-
-    this.atualizarPainel();
-    DOM.relatorioBrutoInput.value = '';
-    showToast(`${AppState.totalOcorrenciasCriadas} ocorrências processadas.`, 'success');
-},
+                if (novosCardsAdicionados > 0) {
+                    registrarAcao(`${novosCardsAdicionados} nova(s) ocorrência(s) semafórica(s) adicionada(s) ao painel.`);
+                    showToast(`${novosCardsAdicionados} nova(s) ocorrência(s) adicionada(s).`, 'success');
+                } else {
+                    showToast('Nenhuma ocorrência nova encontrada no relatório.', 'info');
+                }
+            },
 
 
 
@@ -1068,6 +1138,7 @@
                 
                 return null;
             },
+
             criarElementoCard(cardId, cardData) {
                 const card = document.createElement('div');
                 card.id = cardId;
@@ -1084,13 +1155,14 @@
                     <div class="card-body">${cardData.endereco}</div>
                     ${despachoInfoHTML}
                     <div class="card-footer">
-                        <button class="btn-card-action copy-location" title="Copiar Localização (Ctrl+Click para incluir equipe)"><i class="fa-solid fa-location-crosshairs"></i></button>
+                        <button class="btn-card-action copy-location" title="Copiar Localização"><i class="fa-solid fa-location-crosshairs"></i></button>
                         <button class="btn-card-action edit" title="Editar"><i class="fas fa-pencil-alt"></i></button>
                         <button class="btn-card-action dispatch" title="Despachar Equipe"><i class="fas fa-paper-plane"></i></button>
                         <button class="btn-card-action complete" title="Concluir"><i class="fas fa-check-circle"></i></button>
                     </div>`;
                 return card;
             },
+
             atualizarPainel() {
                 const contadores = {
                     espera: document.querySelectorAll('#coluna-espera .kanban-card').length,
@@ -1113,6 +1185,7 @@
                 this.gerarPreviewRelatorio();
                 this.salvarEstado();
             },
+
             gerarPreviewRelatorio() {
                 const incluirNormalizados = DOM.checkIncluirNormalizados.checked;
                 const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '.');
@@ -1150,54 +1223,75 @@
                 DOM.relatorioFinalPreview.value = texto.trim();
                 return DOM.relatorioFinalPreview.value;
             },
+
             salvarEstado() {
-    const estado = {
-        colunas: {},
-        cards: {},
-        config: {
-            incluirNormalizados: DOM.checkIncluirNormalizados.checked,
-            cardIdCounter: AppState.cardIdCounter,
-            totalOcorrenciasCriadas: AppState.totalOcorrenciasCriadas // <-- LINHA MOVIDA PARA DENTRO DO CONFIG
-        }
-    };
-    document.querySelectorAll('.kanban-column .kanban-cards-container, #gaveta-arquivados .kanban-cards-container').forEach(container => {
-        const colunaId = container.closest('.kanban-column, #gaveta-arquivados').id;
-        estado.colunas[colunaId] = Array.from(container.querySelectorAll('.kanban-card')).map(card => card.id);
-    });
-    document.querySelectorAll('#tab-semaforo .kanban-card').forEach(card => {
-        estado.cards[card.id] = { ...card.dataset };
-    });
-    localStorage.setItem(AppState.STORAGE_KEY_SEMAFORO, JSON.stringify(estado));
-},
+                const estado = {
+                    colunas: {},
+                    cards: {},
+                    config: {
+                        incluirNormalizados: DOM.checkIncluirNormalizados.checked,
+                        cardIdCounter: AppState.cardIdCounter,
+                        totalOcorrenciasCriadas: AppState.totalOcorrenciasCriadas
+                    }
+                };
+                document.querySelectorAll('.kanban-column .kanban-cards-container, #gaveta-arquivados .kanban-cards-container').forEach(container => {
+                    const colunaId = container.closest('.kanban-column, #gaveta-arquivados').id;
+                    estado.colunas[colunaId] = Array.from(container.querySelectorAll('.kanban-card')).map(card => card.id);
+                });
+                document.querySelectorAll('#tab-semaforo .kanban-card').forEach(card => {
+                    estado.cards[card.id] = { ...card.dataset };
+                });
+                localStorage.setItem(AppState.STORAGE_KEY_SEMAFORO, JSON.stringify(estado));
+            },
 
             carregarEstado() {
                 const estadoSalvo = localStorage.getItem(AppState.STORAGE_KEY_SEMAFORO);
                 if (!estadoSalvo) { this.atualizarPainel(); return; }
-                const estado = JSON.parse(estadoSalvo);
-                document.querySelectorAll('#tab-semaforo .kanban-cards-container').forEach(c => c.innerHTML = '');
-                if (estado.cards && estado.colunas) {
-                    Object.keys(estado.colunas).forEach(colunaId => {
-                        const containerParent = document.getElementById(colunaId);
-                        if (containerParent) {
-                            const cardContainer = containerParent.querySelector('.kanban-cards-container') || containerParent;
-                            estado.colunas[colunaId].forEach(cardId => {
-                                const cardData = estado.cards[cardId];
-                                if (cardData) {
-                                    const cardElement = this.criarElementoCard(cardId, cardData);
-                                    cardContainer.appendChild(cardElement);
-                                }
-                            });
-                        }
-                    });
+                try {
+                    const estado = JSON.parse(estadoSalvo);
+                    document.querySelectorAll('#tab-semaforo .kanban-cards-container').forEach(c => c.innerHTML = '');
+                    if (estado.cards && estado.colunas) {
+                        Object.keys(estado.colunas).forEach(colunaId => {
+                            const containerParent = document.getElementById(colunaId);
+                            if (containerParent) {
+                                const cardContainer = containerParent.querySelector('.kanban-cards-container') || containerParent;
+                                estado.colunas[colunaId].forEach(cardId => {
+                                    const cardData = estado.cards[cardId];
+                                    if (cardData) {
+                                        const cardElement = this.criarElementoCard(cardId, cardData);
+                                        cardContainer.appendChild(cardElement);
+                                    }
+                                });
+                            }
+                        });
+                    }
+                    AppState.cardIdCounter = estado.config?.cardIdCounter || 0;
+                    AppState.totalOcorrenciasCriadas = estado.config?.totalOcorrenciasCriadas || 0;
+                    DOM.checkIncluirNormalizados.checked = estado.config?.incluirNormalizados || false;
+                    this.atualizarPainel();
+                } catch (error) {
+                    console.error("Erro ao carregar estado do semáforo:", error);
+                    localStorage.removeItem(AppState.STORAGE_KEY_SEMAFORO); // Limpa estado corrompido
                 }
-                AppState.cardIdCounter = estado.config?.cardIdCounter || 0;
-                AppState.totalOcorrenciasCriadas = estado.config?.totalOcorrenciasCriadas || 0;
-                DOM.checkIncluirNormalizados.checked = estado.config?.incluirNormalizados || false;
-                this.atualizarPainel();
             },
-            handleVisualizarRelatorioClick() { const textoRelatorio = this.gerarPreviewRelatorio(); DOM.modalRelatorioTexto.value = textoRelatorio; abrirModal(DOM.modalRelatorio); },
-            handleCopiarModalClick() { navigator.clipboard.writeText(DOM.modalRelatorioTexto.value).then(() => { fecharModal(DOM.modalRelatorio); showToast('Relatório copiado!', 'success'); }); },
-            handleConfigChange() { this.gerarPreviewRelatorio(); this.salvarEstado(); },
+
+            handleVisualizarRelatorioClick() { 
+                const textoRelatorio = this.gerarPreviewRelatorio(); 
+                DOM.modalRelatorioTexto.value = textoRelatorio; 
+                abrirModal(DOM.modalRelatorio); 
+            },
+
+            handleCopiarModalClick() { 
+                navigator.clipboard.writeText(DOM.modalRelatorioTexto.value).then(() => { 
+                    fecharModal(DOM.modalRelatorio); 
+                    showToast('Relatório copiado!', 'success'); 
+                }); 
+            },
+
+            handleConfigChange() { 
+                this.gerarPreviewRelatorio(); 
+                this.salvarEstado(); 
+            },
             
             handleKanbanBoardClick(e) {
                 const cardElement = e.target.closest('.kanban-card');
@@ -1210,16 +1304,12 @@
                 } else if (e.target.closest('.btn-card-action.complete')) {
                     this.handleNormalizarClick(cardElement);
                 } else if (e.target.closest('.btn-card-action.copy-location')) {
-                    this.copiarLocalizacao(cardElement, e.ctrlKey);
+                    this.copiarLocalizacao(cardElement);
                 }
             },
 
-            copiarLocalizacao(card, comEquipe) {
-                let texto = `*${card.dataset.endereco}*`;
-                if (comEquipe && (card.dataset.equipe || card.dataset.viatura)) {
-                    texto += `\nEquipe: ${card.dataset.equipe || 'N/I'}, VT: ${card.dataset.viatura || 'N/I'}`;
-                }
-                navigator.clipboard.writeText(texto).then(() => {
+            copiarLocalizacao(card) {
+                navigator.clipboard.writeText(`*${card.dataset.endereco}*`).then(() => {
                     showToast('Localização copiada!', 'success');
                 });
             },
@@ -1255,13 +1345,16 @@
                 fecharModal(DOM.modalDespachoSemaforo);
                 this.atualizarPainel();
                 showToast('Despacho salvo!', 'success');
+                registrarAcao(`Equipe despachada para o card '${card.dataset.codigo}': Equipe ${equipe || 'N/I'}, VT ${vt || 'N/I'}.`);
             },
 
             handleNormalizarClick(cardElement) {
                 DOM.colunaNormalizados.appendChild(cardElement);
                 this.atualizarPainel();
                 showToast(`Ocorrência ${cardElement.dataset.codigo} normalizada!`, 'success');
+                registrarAcao(`Card Semafórico '${cardElement.dataset.codigo}' movido para 'Normalizados'.`);
             },
+
             abrirModalEdicao(cardId) {
                 const card = document.getElementById(cardId);
                 if (!card) return;
@@ -1271,34 +1364,110 @@
                 DOM.edicaoProblema.value = card.dataset.problema;
                 abrirModal(DOM.modalEdicao);
             },
+
             handleSalvarEdicaoClick() {
                 const cardId = DOM.edicaoCardId.value;
                 const card = document.getElementById(cardId);
                 if (!card) return;
                 const novoEndereco = DOM.edicaoEndereco.value.trim();
+                const novoProblema = DOM.edicaoProblema.value;
                 if (!novoEndereco) { showToast('Endereço não pode ser vazio.', 'error'); return; }
+
+                const dadosAntigos = `Endereço: ${card.dataset.endereco}, Problema: ${card.dataset.problema}`;
                 card.dataset.endereco = novoEndereco;
-                card.dataset.problema = DOM.edicaoProblema.value;
+                card.dataset.problema = novoProblema;
+                
                 card.querySelector('.card-body').textContent = novoEndereco;
-                card.querySelector('.card-status-tag').textContent = DOM.edicaoProblema.value;
+                card.querySelector('.card-status-tag').textContent = novoProblema;
+                
                 fecharModal(DOM.modalEdicao);
                 this.atualizarPainel();
                 showToast('Ocorrência editada!', 'success');
+                registrarAcao(`Card Semafórico '${card.dataset.codigo}' editado. Dados antigos: ${dadosAntigos}.`);
             },
+
             toggleGaveta(forceState) {
                 const shouldBeOpen = forceState !== undefined ? forceState : !DOM.gavetaArquivados.classList.contains('open');
                 DOM.gavetaArquivados.classList.toggle('open', shouldBeOpen);
                 DOM.kanbanWrapper.classList.toggle('gaveta-open', shouldBeOpen);
             },
-            cardExiste: (codigo) => document.querySelector(`#tab-semaforo .kanban-card[data-codigo='${codigo}']`) !== null,
-            handleDragStart(e) { if (e.target.classList.contains('kanban-card')) { AppState.draggedCard = e.target; AppState.placeholder = document.createElement('div'); AppState.placeholder.className = 'drag-placeholder'; AppState.placeholder.style.height = `${e.target.offsetHeight}px`; setTimeout(() => e.target.classList.add('dragging'), 0); } },
-            handleDragEnd(e) { if(AppState.draggedCard) { AppState.draggedCard.classList.remove('dragging'); } if(AppState.placeholder && AppState.placeholder.parentNode) { AppState.placeholder.parentNode.removeChild(AppState.placeholder); } AppState.draggedCard = null; AppState.placeholder = null; document.querySelectorAll('.kanban-cards-container.drag-over').forEach(c => c.classList.remove('drag-over')); },
-            handleDragOver(e) { e.preventDefault(); const container = e.target.closest('.kanban-cards-container'); if (container && AppState.draggedCard && AppState.draggedCard.classList.contains('kanban-card')) { container.classList.add('drag-over'); const afterElement = this.getDragAfterElement(container, e.clientY); if (afterElement == null) { container.appendChild(AppState.placeholder); } else { container.insertBefore(AppState.placeholder, afterElement); } } },
-            getDragAfterElement(container, y) { const draggableElements = [...container.querySelectorAll('.kanban-card:not(.dragging)')]; return draggableElements.reduce((closest, child) => { const box = child.getBoundingClientRect(); const offset = y - box.top - box.height / 2; if (offset < 0 && offset > closest.offset) { return { offset: offset, element: child }; } else { return closest; } }, { offset: Number.NEGATIVE_INFINITY }).element; },
-            handleDragLeave(e) { const container = e.target.closest('.kanban-cards-container'); if(container) container.classList.remove('drag-over'); },
-            handleDrop(e) { e.preventDefault(); const destinoContainer = e.target.closest('.kanban-cards-container'); if (destinoContainer && AppState.draggedCard && AppState.draggedCard.classList.contains('kanban-card')) { if (AppState.placeholder && AppState.placeholder.parentNode) { AppState.placeholder.parentNode.replaceChild(AppState.draggedCard, AppState.placeholder); } else { destinoContainer.appendChild(AppState.draggedCard); } this.atualizarPainel(); showToast('Card movido!', 'success'); } if(destinoContainer) destinoContainer.classList.remove('drag-over'); },
 
-              
+            cardExiste: (codigo) => document.querySelector(`#tab-semaforo .kanban-card[data-codigo='${codigo}']`) !== null,
+
+            handleDragStart(e) { 
+                if (e.target.classList.contains('kanban-card')) { 
+                    AppState.draggedCard = e.target; 
+                    AppState.placeholder = document.createElement('div'); 
+                    AppState.placeholder.className = 'drag-placeholder'; 
+                    AppState.placeholder.style.height = `${e.target.offsetHeight}px`; 
+                    setTimeout(() => e.target.classList.add('dragging'), 0); 
+                } 
+            },
+
+            handleDragEnd(e) { 
+                if(AppState.draggedCard) { AppState.draggedCard.classList.remove('dragging'); } 
+                if(AppState.placeholder && AppState.placeholder.parentNode) { AppState.placeholder.parentNode.removeChild(AppState.placeholder); } 
+                AppState.draggedCard = null; 
+                AppState.placeholder = null; 
+                document.querySelectorAll('.kanban-cards-container.drag-over').forEach(c => c.classList.remove('drag-over')); 
+            },
+
+            handleDragOver(e) { 
+                e.preventDefault(); 
+                const container = e.target.closest('.kanban-cards-container'); 
+                if (container && AppState.draggedCard && AppState.draggedCard.classList.contains('kanban-card')) { 
+                    container.classList.add('drag-over'); 
+                    const afterElement = this.getDragAfterElement(container, e.clientY); 
+                    if (afterElement == null) { 
+                        container.appendChild(AppState.placeholder); 
+                    } else { 
+                        container.insertBefore(AppState.placeholder, afterElement); 
+                    } 
+                } 
+            },
+
+            getDragAfterElement(container, y) { 
+                const draggableElements = [...container.querySelectorAll('.kanban-card:not(.dragging)')]; 
+                return draggableElements.reduce((closest, child) => { 
+                    const box = child.getBoundingClientRect(); 
+                    const offset = y - box.top - box.height / 2; 
+                    if (offset < 0 && offset > closest.offset) { 
+                        return { offset: offset, element: child }; 
+                    } else { 
+                        return closest; 
+                    } 
+                }, { offset: Number.NEGATIVE_INFINITY }).element; 
+            },
+
+            handleDragLeave(e) { 
+                const container = e.target.closest('.kanban-cards-container'); 
+                if(container) container.classList.remove('drag-over'); 
+            },
+
+            handleDrop(e) {
+                e.preventDefault();
+                const destinoContainer = e.target.closest('.kanban-cards-container');
+                if (destinoContainer && AppState.draggedCard && AppState.draggedCard.classList.contains('kanban-card')) {
+                    if (AppState.placeholder && AppState.placeholder.parentNode) {
+                        AppState.placeholder.parentNode.replaceChild(AppState.draggedCard, AppState.placeholder);
+                    } else {
+                        destinoContainer.appendChild(AppState.draggedCard);
+                    }
+                    this.atualizarPainel();
+                    showToast('Card movido!', 'success');
+
+                    try {
+                        const coluna = destinoContainer.closest('.kanban-column');
+                        const nomeColuna = coluna.querySelector('.kanban-column-header .header-text').textContent.trim();
+                        registrarAcao(`Card Semafórico '${AppState.draggedCard.dataset.codigo}' movido para '${nomeColuna}'.`);
+                    } catch (error) {
+                        console.error("Erro ao registrar ação de drop:", error);
+                        registrarAcao(`Card Semafórico '${AppState.draggedCard.dataset.codigo}' foi movido.`);
+                    }
+                }
+                if (destinoContainer) destinoContainer.classList.remove('drag-over');
+            },
+            
             limparPainel() {
                 if (confirm("Tem certeza que deseja limpar TODOS os dados da aba SEMAFÓRICO?")) {
                     localStorage.removeItem(AppState.STORAGE_KEY_SEMAFORO);
@@ -1308,13 +1477,11 @@
                     AppState.totalOcorrenciasCriadas = 0;
                     this.atualizarPainel();
                     showToast('Painel semafórico limpo!', 'success');
+                    registrarAcao('Painel Semafórico foi limpo.');
                 }
             }
+        };
 
-            // ... (aqui virá a chave de fechamento final do objeto Semaforo: `};`)
-
-
-        }; //
 
         const Turno = {
             inicializar() {
@@ -1688,6 +1855,8 @@
             },
 
             finalizarAcionamento(card) {
+                registrarAcao(`Reboquista '${card.dataset.nome}' foi liberado e está disponível.`); // <-- LINHA ADICIONADA
+                
                 const nomeReboquista = card.dataset.nome;
                 Eventos.desalocarReboquistaDeEvento(nomeReboquista);
 
@@ -1916,6 +2085,8 @@ gerarRelatorioFrota() {
                     return;
                 }
                 
+                registrarAcao(`Novo evento criado: '${eventoData.tipo}' no endereço '${eventoData.endereco}'.`);
+
                 this.adicionarEvento(eventoData);
                 
                 DOM.eventoTipo.value = '';
@@ -2055,7 +2226,7 @@ gerarRelatorioFrota() {
 
 
 
-                finalizarEvento(eventoElement) {
+            finalizarEvento(eventoElement) {
                 const reboquistasNoEvento = JSON.parse(eventoElement.dataset.reboquistas || '[]');
                 const nomesDosReboquistas = reboquistasNoEvento.map(r => r.nome); // Pega apenas os nomes
 
@@ -2081,10 +2252,12 @@ gerarRelatorioFrota() {
                 showToast(`Evento finalizado! ${nomesDosReboquistas.length} reboquista(s) liberado(s).`, 'success');
             },
 
-                removerEvento(eventoElement) {
+            removerEvento(eventoElement) {
                 // Altera a mensagem para refletir o novo comportamento
                 if (confirm('Tem certeza que deseja CANCELAR este evento? Os reboquistas alocados serão liberados.')) {
-
+                    
+                    const numReboquistas = JSON.parse(eventoElement.dataset.reboquistas || '[]').length;
+                    registrarAcao(`Evento '${eventoElement.dataset.tipo}' foi cancelado. ${numReboquistas} reboquista(s) liberado(s).`);
                     
                     // Pega a lista de reboquistas do evento que será removido
                     const reboquistasNoEvento = JSON.parse(eventoElement.dataset.reboquistas || '[]');
@@ -2093,7 +2266,7 @@ gerarRelatorioFrota() {
                     if (nomesDosReboquistas.length > 0) {
                         // Encontra todos os cards de reboquistas que estão na coluna "Atuando"
                         const reboquistasAtuando = document.querySelectorAll('#reboques-atuando .reboque-card');
-
+                       
                         reboquistasAtuando.forEach(reboquistaCard => {
                             // Se o reboquista pertence ao evento que está sendo removido...
                             if (nomesDosReboquistas.includes(reboquistaCard.dataset.nome)) {
@@ -2133,6 +2306,9 @@ gerarRelatorioFrota() {
                     showToast('Reboquista já está alocado neste evento.', 'info');
                     return;
                 }
+
+                registrarAcao(`Reboquista '${nomeReboquista}' alocado ao evento '${eventoCard.dataset.tipo}'.`);
+
                 
                 reboquistas.push({ nome: nomeReboquista, vt: vtReboquista });
                 eventoCard.dataset.reboquistas = JSON.stringify(reboquistas);
@@ -2338,8 +2514,10 @@ gerarRelatorioFrota() {
         };
 
         document.addEventListener('DOMContentLoaded', inicializarApp);
-
+            
     })();
+
+    
     </script>
 
 </body>
