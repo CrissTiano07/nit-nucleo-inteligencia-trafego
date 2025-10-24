@@ -228,6 +228,14 @@
     }
 }
 
+#btn-abrir-gaveta {
+    transition: opacity 0.3s;
+}
+
+#btn-abrir-gaveta.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
 
 
     </style>
@@ -355,6 +363,10 @@
                             </div>
                             <div class="kanban-cards-container" id="coluna-normalizados"></div>
                         </div>
+                        <!-- Botão para abrir gaveta (ADICIONAR ANTES do fechamento de painel-operacional-wrapper) -->
+                        <button id="btn-abrir-gaveta" class="btn-icon" style="position: absolute; top: 10px; right: 10px; z-index: 5; background-color: var(--color-primary); color: white;" title="Ver Normalizados">
+                            <i class="fas fa-archive"></i>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1076,7 +1088,15 @@
                 DOM.checkIncluirNormalizados.addEventListener('change', this.handleConfigChange.bind(this));
                 DOM.btnModalCopiar.addEventListener('click', this.handleCopiarModalClick.bind(this));
                 DOM.btnToggleArquivados.addEventListener('click', (e) => { e.stopPropagation(); this.toggleGaveta(); });
+                const btnAbrirGaveta = document.getElementById('btn-abrir-gaveta');
+                    if (btnAbrirGaveta) {
+                        btnAbrirGaveta.addEventListener('click', (e) => { 
+                            e.stopPropagation(); 
+                            this.toggleGaveta(true); 
+                        });
+                    }
                 document.addEventListener('click', (e) => { if (DOM.gavetaArquivados.classList.contains('open') && !DOM.gavetaArquivados.contains(e.target) && !DOM.btnToggleArquivados.contains(e.target)) { this.toggleGaveta(false); } });
+
                 
                 const kanbanArea = document.querySelector('#tab-semaforo');
                 kanbanArea.addEventListener('dragstart', this.handleDragStart.bind(this));
@@ -1085,6 +1105,7 @@
                 kanbanArea.addEventListener('dragleave', this.handleDragLeave.bind(this));
                 kanbanArea.addEventListener('drop', this.handleDrop.bind(this));
                 kanbanArea.addEventListener('click', this.handleKanbanBoardClick.bind(this));
+                
             },
 
                 handleProcessarClick() {
@@ -1409,11 +1430,17 @@
                 registrarAcao(`Card Semafórico '${card.dataset.codigo}' editado. Dados antigos: ${dadosAntigos}.`);
             },
 
-            toggleGaveta(forceState) {
-                const shouldBeOpen = forceState !== undefined ? forceState : !DOM.gavetaArquivados.classList.contains('open');
-                DOM.gavetaArquivados.classList.toggle('open', shouldBeOpen);
-                DOM.kanbanWrapper.classList.toggle('gaveta-open', shouldBeOpen);
-            },
+    toggleGaveta(forceState) {
+    const shouldBeOpen = forceState !== undefined ? forceState : !DOM.gavetaArquivados.classList.contains('open');
+    DOM.gavetaArquivados.classList.toggle('open', shouldBeOpen);
+    DOM.kanbanWrapper.classList.toggle('gaveta-open', shouldBeOpen);
+    
+    // Esconde botão de abrir quando gaveta está aberta
+    const btnAbrir = document.getElementById('btn-abrir-gaveta');
+    if (btnAbrir) {
+        btnAbrir.classList.toggle('hidden', shouldBeOpen);
+    }
+},
 
             cardExiste: (codigo) => document.querySelector(`#tab-semaforo .kanban-card[data-codigo='${codigo}']`) !== null,
 
