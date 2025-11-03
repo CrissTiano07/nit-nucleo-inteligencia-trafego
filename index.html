@@ -1131,459 +1131,556 @@
     }
 }
 
-                const Semaforo = {
-            inicializar() {
-                this.carregarEstado();
-                DOM.btnEdicaoSalvar.addEventListener('click', this.handleSalvarEdicaoClick.bind(this));
-                DOM.btnDespachoSemaforoConfirmar.addEventListener('click', this.handleSalvarDespachoClick.bind(this));
-                DOM.btnProcessar.addEventListener('click', this.handleProcessarClick.bind(this));
-                DOM.btnVisualizarRelatorio.addEventListener('click', this.handleVisualizarRelatorioClick.bind(this));
-                DOM.checkIncluirNormalizados.addEventListener('change', this.handleConfigChange.bind(this));
-                DOM.btnModalCopiar.addEventListener('click', this.handleCopiarModalClick.bind(this));
-                DOM.btnToggleArquivados.addEventListener('click', (e) => { e.stopPropagation(); this.toggleGaveta(); });
-                const btnAbrirGaveta = document.getElementById('btn-abrir-gaveta');
-                    if (btnAbrirGaveta) {
-                        btnAbrirGaveta.addEventListener('click', (e) => { 
-                            e.stopPropagation(); 
-                            this.toggleGaveta(true); 
-                        });
-                    }
-                document.addEventListener('click', (e) => { if (DOM.gavetaArquivados.classList.contains('open') && !DOM.gavetaArquivados.contains(e.target) && !DOM.btnToggleArquivados.contains(e.target)) { this.toggleGaveta(false); } });
+  // SUBSTITUA TODO O SEU OBJETO "const Semaforo = { ... };" POR ESTE BLOCO COMPLETO:
 
-                
-                const kanbanArea = document.querySelector('#tab-semaforo');
-                kanbanArea.addEventListener('dragstart', this.handleDragStart.bind(this));
-                kanbanArea.addEventListener('dragend', this.handleDragEnd.bind(this));
-                kanbanArea.addEventListener('dragover', this.handleDragOver.bind(this));
-                kanbanArea.addEventListener('dragleave', this.handleDragLeave.bind(this));
-                kanbanArea.addEventListener('drop', this.handleDrop.bind(this));
-                kanbanArea.addEventListener('click', this.handleKanbanBoardClick.bind(this));
-                
-            },
+const Semaforo = {
+    inicializar() {
+        this.carregarEstado();
+        DOM.btnProcessar.addEventListener('click', this.handleProcessarClick.bind(this));
+        
+        DOM.btnEdicaoSalvar.addEventListener('click', this.handleSalvarEdicaoClick.bind(this));
+        DOM.btnDespachoSemaforoConfirmar.addEventListener('click', this.handleSalvarDespachoClick.bind(this));
+        DOM.btnVisualizarRelatorio.addEventListener('click', this.handleVisualizarRelatorioClick.bind(this));
+        DOM.checkIncluirNormalizados.addEventListener('change', this.handleConfigChange.bind(this));
+        DOM.btnModalCopiar.addEventListener('click', this.handleCopiarModalClick.bind(this));
+        
+        const btnAbrirGaveta = document.getElementById('btn-abrir-gaveta');
+        if (btnAbrirGaveta) {
+            btnAbrirGaveta.addEventListener('click', (e) => { 
+                e.stopPropagation(); 
+                this.toggleGaveta(true); 
+            });
+        }
+        DOM.btnToggleArquivados.addEventListener('click', (e) => { e.stopPropagation(); this.toggleGaveta(false); });
+        
+        document.addEventListener('click', (e) => { 
+            const btnAbrirGaveta = document.getElementById('btn-abrir-gaveta');
+            if (DOM.gavetaArquivados.classList.contains('open') && !DOM.gavetaArquivados.contains(e.target) && !DOM.btnToggleArquivados.contains(e.target) && (!btnAbrirGaveta || !btnAbrirGaveta.contains(e.target))) {
+                this.toggleGaveta(false);
+            }
+        });
 
-                handleProcessarClick() {
-                const textoBruto = DOM.relatorioBrutoInput.value;
-                if (!textoBruto) {
-                    showToast('Insira o relatório bruto para processar.', 'warning');
-                    return;
+        const kanbanArea = document.querySelector('#tab-semaforo');
+        kanbanArea.addEventListener('dragstart', this.handleDragStart.bind(this));
+        kanbanArea.addEventListener('dragend', this.handleDragEnd.bind(this));
+        kanbanArea.addEventListener('dragover', this.handleDragOver.bind(this));
+        kanbanArea.addEventListener('dragleave', this.handleDragLeave.bind(this));
+        kanbanArea.addEventListener('drop', this.handleDrop.bind(this));
+        kanbanArea.addEventListener('click', this.handleKanbanBoardClick.bind(this));
+    },
+
+    // SUBSTITUA A FUNÇÃO handleProcessarClick PELA VERSÃO ABAIXO:
+handleProcessarClick() {
+    const textoBruto = DOM.relatorioBrutoInput.value;
+    if (!textoBruto.trim()) {
+        showToast('Insira o relatório bruto para processar.', 'warning');
+        return;
+    }
+
+    // --- LÓGICA DE DETECÇÃO DE MODO ---
+    const painelJaPreenchido = document.querySelector('#tab-semaforo .kanban-card') !== null;
+
+    // --- COLETA E PROCESSAMENTO DE EVENTOS (COMUM A AMBOS OS MODOS) ---
+    const linhas = textoBruto.split('\n');
+    const todosOsEventos = [];
+    let eventoAtual = null;
+    let secaoAtual = 'PENDENTE';
+
+    for (const linha of linhas) {
+        if (/NORMALIZADOS✅/.test(linha)) { secaoAtual = 'NORMALIZADO'; continue; }
+        if (/PENDENTES❌/.test(linha)) { secaoAtual = 'PENDENTE'; continue; }
+
+        const dadosDaLinha = this.extrairDadosDaLinha(linha);
+        if (dadosDaLinha) {
+            if (eventoAtual) todosOsEventos.push(eventoAtual);
+            eventoAtual = { ...dadosDaLinha, secao: secaoAtual };
+        } else if (eventoAtual && linha.trim()) {
+            eventoAtual.observacoes = (eventoAtual.observacoes ? eventoAtual.observacoes + ' ' : '') + linha.trim().replace(/"/g, '');
+        }
+    }
+    if (eventoAtual) todosOsEventos.push(eventoAtual);
+    const eventosValidos = todosOsEventos.filter(ev => ev.codigo);
+
+    if (!painelJaPreenchido) {
+        // ==================================================
+        // MODO 1: CARGA INICIAL (PAINEL VAZIO)
+        // ==================================================
+        console.log("Executando Modo de Carga Inicial...");
+        AppState.totalOcorrenciasCriadas = eventosValidos.length;
+        eventosValidos.forEach(cardData => {
+            let statusFinal = cardData.secao;
+            if (statusFinal === 'PENDENTE' && this.avaliarStatus(cardData) === 'SEM_NECESSIDADE') {
+                statusFinal = 'SEM_NECESSIDADE';
+            }
+            this.criarNovoCard(cardData, statusFinal);
+        });
+        showToast(`${eventosValidos.length} ocorrência(s) processada(s).`, 'success');
+
+    } else {
+        // ==================================================
+        // MODO 2: ATUALIZAÇÃO INTELIGENTE (PAINEL PREENCHIDO)
+        // ==================================================
+        console.log("Executando Modo de Atualização Inteligente...");
+        const mapaCardsAtuais = new Map();
+        document.querySelectorAll('#tab-semaforo .kanban-card').forEach(card => {
+            const codigo = card.dataset.codigo;
+            const estaNormalizado = card.closest('#coluna-normalizados') !== null;
+            mapaCardsAtuais.set(codigo, {
+                element: card,
+                status: estaNormalizado ? 'NORMALIZADO' : 'PENDENTE'
+            });
+        });
+
+        let novosCardsCriados = 0;
+        let cardsAtualizados = 0;
+
+        eventosValidos.forEach(eventoData => {
+            const codigo = eventoData.codigo;
+            const statusNovoEvento = this.avaliarStatus(eventoData);
+            const cardExistente = mapaCardsAtuais.get(codigo);
+
+            if (!cardExistente) {
+                this.criarNovoCard(eventoData, statusNovoEvento);
+                novosCardsCriados++;
+            } else {
+                const statusAntigo = cardExistente.status;
+                if (statusAntigo !== 'NORMALIZADO' && statusNovoEvento === 'NORMALIZADO') {
+                    DOM.colunaNormalizados.appendChild(cardExistente.element);
+                    cardsAtualizados++;
+                    cardExistente.element.classList.add('card-foi-normalizado');
+                    setTimeout(() => cardExistente.element.classList.remove('card-foi-normalizado'), 2000);
                 }
+            }
+        });
+        
+        AppState.totalOcorrenciasCriadas += novosCardsCriados;
 
-                // 1. Mapeia os cards que já existem no painel.
-                const cardsExistentes = new Map();
-                document.querySelectorAll('#tab-semaforo .kanban-card').forEach(card => {
-                    cardsExistentes.set(card.dataset.codigo, card);
-                });
+        let mensagemToast = '';
+        if (novosCardsCriados > 0) mensagemToast += `${novosCardsCriados} nova(s) ocorrência(s) adicionada(s). `;
+        if (cardsAtualizados > 0) mensagemToast += `${cardsAtualizados} ocorrência(s) atualizada(s) para Normalizado.`;
+        
+        if (mensagemToast) {
+            showToast(mensagemToast, 'success');
+        } else {
+            showToast('Nenhuma mudança detectada no relatório.', 'info');
+        }
+    }
 
-                // 2. Processa o texto linha por linha.
-                const linhas = textoBruto.split('\n');
-                let novosCardsAdicionados = 0;
-
-                linhas.forEach(linha => {
-                    const cardData = this.extrairDadosDoBloco(linha);
-
-                    // Se a linha é válida E o card ainda não existe no painel...
-                    if (cardData && !cardsExistentes.has(cardData.codigo)) {
-                        
-                        // ...cria o novo card.
-                        const cardId = `card-${AppState.cardIdCounter++}`;
-                        const cardElement = this.criarElementoCard(cardId, cardData);
-                        
-                        // Adiciona na coluna "Aguardando" por padrão.
-                        document.querySelector('#coluna-espera .kanban-cards-container').appendChild(cardElement);
-                        
-                        novosCardsAdicionados++;
-                        AppState.totalOcorrenciasCriadas++;
-                    }
-                });
-
-                // 3. Finaliza e atualiza.
-                this.atualizarPainel();
-                DOM.relatorioBrutoInput.value = '';
-
-                if (novosCardsAdicionados > 0) {
-                    registrarAcao(`${novosCardsAdicionados} nova(s) ocorrência(s) semafórica(s) adicionada(s) ao painel.`);
-                    showToast(`${novosCardsAdicionados} nova(s) ocorrência(s) adicionada(s).`, 'success');
-                } else {
-                    showToast('Nenhuma ocorrência nova encontrada no relatório.', 'info');
-                }
-            },
+    // --- FINALIZAÇÃO (COMUM A AMBOS OS MODOS) ---
+    this.atualizarPainel();
+    DOM.relatorioBrutoInput.value = '';
+},
 
 
+    criarNovoCard(cardData, status) {
+        const cardId = `card-${AppState.cardIdCounter++}`;
+        const cardElement = this.criarElementoCard(cardId, cardData);
 
+        switch (status) {
+            case 'NORMALIZADO':
+                DOM.colunaNormalizados.appendChild(cardElement);
+                break;
+            case 'SEM_NECESSIDADE':
+                document.getElementById('coluna-sem-necessidade').querySelector('.kanban-cards-container').appendChild(cardElement);
+                break;
+            default: // PENDENTE
+                document.querySelector('#coluna-espera .kanban-cards-container').appendChild(cardElement);
+                break;
+        }
+    },
 
+    extrairDadosDaLinha(linha) {
+        const match = linha.match(/(?:([A-Z\s]+)\s*)?🚦\s*(\d{3,4})\s*🚦\s*(.*?)\s*●\s*([A-ZÀ-Ú\s/]+)(.*)/i);
+        if (!match) return null;
 
-            extrairDadosDoBloco(bloco) {
-                const formatoNovoMatch = bloco.match(/🚦\s*(\d{3,4})\s*🚦\s*(.*?)\s*●\s*(APAGADO|PISCANTE|TRAVADO|INTERMITENTE|N\/I)/i);
-                if (formatoNovoMatch) {
-                    return {
-                        codigo: formatoNovoMatch[1],
-                        endereco: formatoNovoMatch[2].trim().replace(/\s+/g, ' '),
-                        problema: formatoNovoMatch[3].toUpperCase(),
-                        equipe: '', viatura: ''
-                    };
-                }
+        const dados = {
+            tipo: (match[1] || 'N/I').trim(),
+            codigo: match[2].trim(),
+            endereco: match[3].trim().replace(/\s+/g, ' '),
+            problema: match[4].trim().toUpperCase(),
+            inicio: '',
+            fim: '',
+            observacoes: (match[5] || '').trim()
+        };
 
-                const formatoAntigoMatch = bloco.match(/^(\d{3,4})\s*🚦\s*(.*?)\s*●\s*(APAGADO|PISCANTE|TRAVADO|INTERMITENTE|N\/I)/i);
-                if (formatoAntigoMatch) {
-                    return {
-                        codigo: formatoAntigoMatch[1],
-                        endereco: formatoAntigoMatch[2].trim().replace(/\s+/g, ' '),
-                        problema: formatoAntigoMatch[3].toUpperCase(),
-                        equipe: '', viatura: ''
-                    };
-                }
-                
-                return null;
-            },
+        const fimMatch = linha.match(/Fim:\s*([^\t\n]+)/i);
+        if (fimMatch) dados.fim = fimMatch[1].trim();
 
-            criarElementoCard(cardId, cardData) {
-                const card = document.createElement('div');
-                card.id = cardId;
-                card.className = 'kanban-card';
-                card.draggable = true;
-                Object.keys(cardData).forEach(key => { if (cardData[key] !== undefined) card.dataset[key] = cardData[key]; });
-                
-                const despachoInfoHTML = (cardData.equipe || cardData.viatura) 
-                    ? `<div class="card-despacho-info"><strong>Equipe:</strong> ${cardData.equipe || 'N/I'} | <strong>VT:</strong> ${cardData.viatura || 'N/I'}</div>` 
-                    : '<div class="card-despacho-info" style="display:none;"></div>';
+        const inicioMatch = linha.match(/Início:\s*([^\t\n]+)/i);
+        if (inicioMatch) dados.inicio = inicioMatch[1].trim();
 
-                card.innerHTML = `
-                    <div class="card-header"><strong>${cardData.codigo}</strong><span class="card-status-tag">${cardData.problema}</span></div>
-                    <div class="card-body">${cardData.endereco}</div>
-                    ${despachoInfoHTML}
-                    <div class="card-footer">
-                        <button class="btn-card-action copy-location" title="Copiar Localização"><i class="fa-solid fa-location-crosshairs"></i></button>
-                        <button class="btn-card-action edit" title="Editar"><i class="fas fa-pencil-alt"></i></button>
-                        <button class="btn-card-action dispatch" title="Despachar Equipe"><i class="fas fa-paper-plane"></i></button>
-                        <button class="btn-card-action complete" title="Concluir"><i class="fas fa-check-circle"></i></button>
-                    </div>`;
-                return card;
-            },
+        return dados;
+    },
 
-            atualizarPainel() {
-                const contadores = {
-                    espera: document.querySelectorAll('#coluna-espera .kanban-card').length,
-                    'sem-necessidade': document.querySelectorAll('#coluna-sem-necessidade .kanban-card').length,
-                    vl: document.querySelectorAll('#coluna-vl .kanban-card').length,
-                    amc: document.querySelectorAll('#coluna-amc .kanban-card').length,
-                    normalizados: DOM.colunaNormalizados.querySelectorAll('.kanban-card').length,
-                };
-                const totalNormalizados = contadores.normalizados;
-                const totalPendentes = Object.values(contadores).reduce((a, b) => a + b, 0) - totalNormalizados;
-                DOM.displayTotal.textContent = AppState.totalOcorrenciasCriadas;
-                DOM.displayPendentes.textContent = totalPendentes;
-                DOM.displayNormalizados.textContent = totalNormalizados;
-                DOM.countNormalizadosGaveta.textContent = totalNormalizados;
-                Object.keys(contadores).forEach(key => {
-                    const elId = `count-${key.replace('_', '-')}`;
-                    const el = document.getElementById(elId);
-                    if (el) el.textContent = contadores[key];
-                });
-                this.gerarPreviewRelatorio();
-                this.salvarEstado();
-            },
+    avaliarStatus(cardData) {
+        if (cardData.fim && cardData.fim.trim() !== '') {
+            return 'NORMALIZADO';
+        }
 
-            gerarPreviewRelatorio() {
-                const incluirNormalizados = DOM.checkIncluirNormalizados.checked;
-                const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '.');
-                let texto = `*RELATÓRIO DE ATENDIMENTO SEMAFÓRICO – ${hoje}*\n` +
-                            `*Ocorrências (${DOM.displayTotal.textContent})*\n` +
-                            `*Pendentes (${DOM.displayPendentes.textContent})*\n` +
-                            `*Normalizados (${DOM.displayNormalizados.textContent})*\n\n`;
-                
-                const getCardText = (card) => {
-                    let cardText = `${card.dataset.codigo} 🚦 ${card.dataset.endereco} ● ${card.dataset.problema}`;
-                    if (card.dataset.equipe || card.dataset.viatura) {
-                        cardText += ` (Equipe: ${card.dataset.equipe || 'N/I'}, VT: ${card.dataset.viatura || 'N/I'})`;
-                    }
-                    return cardText;
-                };
+        const endereco = (cardData.endereco || '').toLowerCase();
+        const observacoes = (cardData.observacoes || '').toLowerCase().replace(/\s+/g, ' ');
+        
+        const ehPgvOuEntre = endereco.includes('pgv') || endereco.startsWith('entre');
+        const regexStatusOk = /cruzamento\s+(funcionando|normal|ok)/;
+        const estaFuncionando = regexStatusOk.test(observacoes);
 
-                const secoes = {
-                    '*ATENDIDOS PELO VIA LIVRE (EM ANDAMENTO):*': Array.from(document.querySelectorAll('#coluna-vl .kanban-card')).map(getCardText),
-                    '*ATENDIDOS PELA AMC (EM ANDAMENTO):*': Array.from(document.querySelectorAll('#coluna-amc .kanban-card')).map(getCardText),
-                };
-                Object.entries(secoes).forEach(([titulo, itens]) => {
-                    if (itens.length > 0) texto += `${titulo}\n${itens.join('\n')}\n\n`;
-                });
-                const aguardandoTecnica = Array.from(document.querySelectorAll('#coluna-espera .kanban-card')).map(getCardText);
-                const semNecessidade = Array.from(document.querySelectorAll('#coluna-sem-necessidade .kanban-card')).map(getCardText);
-                if (aguardandoTecnica.length > 0 || semNecessidade.length > 0) {
-                    texto += `*PENDENTES / OUTROS MOTIVOS*\n`;
-                    if (aguardandoTecnica.length > 0) texto += `*- - Aguardando atendimento:*\n${aguardandoTecnica.join('\n')}\n`;
-                    if (semNecessidade.length > 0) texto += `\n*- - Sem necessidade de operação:*\n${semNecessidade.join('\n')}\n`;
-                }
-                if (incluirNormalizados) {
-                    const normalizados = Array.from(DOM.colunaNormalizados.querySelectorAll('.kanban-card')).map(getCardText);
-                    if (normalizados.length > 0) texto += `\n*NORMALIZADOS:*\n${normalizados.join('\n')}\n`;
-                }
-                DOM.relatorioFinalPreview.value = texto.trim();
-                return DOM.relatorioFinalPreview.value;
-            },
+        if (ehPgvOuEntre || estaFuncionando) {
+            return 'SEM_NECESSIDADE';
+        }
+        
+        return 'PENDENTE';
+    },
 
-            salvarEstado() {
-                const estado = {
-                    colunas: {},
-                    cards: {},
-                    config: {
-                        incluirNormalizados: DOM.checkIncluirNormalizados.checked,
-                        cardIdCounter: AppState.cardIdCounter,
-                        totalOcorrenciasCriadas: AppState.totalOcorrenciasCriadas
-                    }
-                };
-                document.querySelectorAll('.kanban-column .kanban-cards-container, #gaveta-arquivados .kanban-cards-container').forEach(container => {
-                    const colunaId = container.closest('.kanban-column, #gaveta-arquivados').id;
-                    estado.colunas[colunaId] = Array.from(container.querySelectorAll('.kanban-card')).map(card => card.id);
-                });
-                document.querySelectorAll('#tab-semaforo .kanban-card').forEach(card => {
-                    estado.cards[card.id] = { ...card.dataset };
-                });
-                localStorage.setItem(AppState.STORAGE_KEY_SEMAFORO, JSON.stringify(estado));
-            },
+    criarElementoCard(cardId, cardData) {
+        const card = document.createElement('div');
+        card.id = cardId;
+        card.className = 'kanban-card';
+        card.draggable = true;
+        Object.keys(cardData).forEach(key => { if (cardData[key] !== undefined) card.dataset[key] = cardData[key]; });
+        
+        const despachoInfoHTML = (cardData.equipe || cardData.viatura) 
+            ? `<div class="card-despacho-info"><strong>Equipe:</strong> ${cardData.equipe || 'N/I'} | <strong>VT:</strong> ${cardData.viatura || 'N/I'}</div>` 
+            : '<div class="card-despacho-info" style="display:none;"></div>';
 
-            carregarEstado() {
-                const estadoSalvo = localStorage.getItem(AppState.STORAGE_KEY_SEMAFORO);
-                if (!estadoSalvo) { this.atualizarPainel(); return; }
-                try {
-                    const estado = JSON.parse(estadoSalvo);
-                    document.querySelectorAll('#tab-semaforo .kanban-cards-container').forEach(c => c.innerHTML = '');
-                    if (estado.cards && estado.colunas) {
-                        Object.keys(estado.colunas).forEach(colunaId => {
-                            const containerParent = document.getElementById(colunaId);
-                            if (containerParent) {
-                                const cardContainer = containerParent.querySelector('.kanban-cards-container') || containerParent;
-                                estado.colunas[colunaId].forEach(cardId => {
-                                    const cardData = estado.cards[cardId];
-                                    if (cardData) {
-                                        const cardElement = this.criarElementoCard(cardId, cardData);
-                                        cardContainer.appendChild(cardElement);
-                                    }
-                                });
+        card.innerHTML = `
+            <div class="card-header"><strong>${cardData.codigo}</strong><span class="card-status-tag">${cardData.problema}</span></div>
+            <div class="card-body">${cardData.endereco}</div>
+            ${despachoInfoHTML}
+            <div class="card-footer">
+                <button class="btn-card-action copy-location" title="Copiar Localização"><i class="fa-solid fa-location-crosshairs"></i></button>
+                <button class="btn-card-action edit" title="Editar"><i class="fas fa-pencil-alt"></i></button>
+                <button class="btn-card-action dispatch" title="Despachar Equipe"><i class="fas fa-paper-plane"></i></button>
+                <button class="btn-card-action complete" title="Concluir"><i class="fas fa-check-circle"></i></button>
+            </div>`;
+        return card;
+    },
+
+    atualizarPainel() {
+        const contadores = {
+            espera: document.querySelectorAll('#coluna-espera .kanban-card').length,
+            'sem-necessidade': document.querySelectorAll('#coluna-sem-necessidade .kanban-card').length,
+            vl: document.querySelectorAll('#coluna-vl .kanban-card').length,
+            amc: document.querySelectorAll('#coluna-amc .kanban-card').length,
+            normalizados: DOM.colunaNormalizados.querySelectorAll('.kanban-card').length,
+        };
+        const totalNormalizados = contadores.normalizados;
+        const totalPendentes = Object.values(contadores).reduce((a, b) => a + b, 0) - totalNormalizados;
+        
+        DOM.displayTotal.textContent = AppState.totalOcorrenciasCriadas;
+        DOM.displayPendentes.textContent = totalPendentes;
+        DOM.displayNormalizados.textContent = totalNormalizados;
+        DOM.countNormalizadosGaveta.textContent = totalNormalizados;
+        
+        Object.keys(contadores).forEach(key => {
+            const elId = `count-${key.replace('_', '-')}`;
+            const el = document.getElementById(elId);
+            if (el) el.textContent = contadores[key];
+        });
+        
+        this.gerarPreviewRelatorio();
+        this.salvarEstado();
+    },
+
+    gerarPreviewRelatorio() {
+        const incluirNormalizados = DOM.checkIncluirNormalizados.checked;
+        const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '.');
+        let texto = `*RELATÓRIO DE ATENDIMENTO SEMAFÓRICO – ${hoje}*\n` +
+                    `*Ocorrências (${DOM.displayTotal.textContent})*\n` +
+                    `*Pendentes (${DOM.displayPendentes.textContent})*\n` +
+                    `*Normalizados (${DOM.displayNormalizados.textContent})*\n\n`;
+        
+        const getCardText = (card) => {
+            let cardText = `${card.dataset.codigo} 🚦 ${card.dataset.endereco} ● ${card.dataset.problema}`;
+            if (card.dataset.equipe || card.dataset.viatura) {
+                cardText += ` (Equipe: ${card.dataset.equipe || 'N/I'}, VT: ${card.dataset.viatura || 'N/I'})`;
+            }
+            return cardText;
+        };
+
+        const secoes = {
+            '*ATENDIDOS PELO VIA LIVRE (EM ANDAMENTO):*': Array.from(document.querySelectorAll('#coluna-vl .kanban-card')).map(getCardText),
+            '*ATENDIDOS PELA AMC (EM ANDAMENTO):*': Array.from(document.querySelectorAll('#coluna-amc .kanban-card')).map(getCardText),
+        };
+        Object.entries(secoes).forEach(([titulo, itens]) => {
+            if (itens.length > 0) texto += `${titulo}\n${itens.join('\n')}\n\n`;
+        });
+        const aguardandoTecnica = Array.from(document.querySelectorAll('#coluna-espera .kanban-card')).map(getCardText);
+        const semNecessidade = Array.from(document.querySelectorAll('#coluna-sem-necessidade .kanban-card')).map(getCardText);
+        if (aguardandoTecnica.length > 0 || semNecessidade.length > 0) {
+            texto += `*PENDENTES / OUTROS MOTIVOS*\n`;
+            if (aguardandoTecnica.length > 0) texto += `*- - Aguardando atendimento:*\n${aguardandoTecnica.join('\n')}\n`;
+            if (semNecessidade.length > 0) texto += `\n*- - Sem necessidade de operação:*\n${semNecessidade.join('\n')}\n`;
+        }
+        if (incluirNormalizados) {
+            const normalizados = Array.from(DOM.colunaNormalizados.querySelectorAll('.kanban-card')).map(getCardText);
+            if (normalizados.length > 0) texto += `\n*NORMALIZADOS:*\n${normalizados.join('\n')}\n`;
+        }
+        DOM.relatorioFinalPreview.value = texto.trim();
+        return DOM.relatorioFinalPreview.value;
+    },
+
+    salvarEstado() {
+        const estado = {
+            colunas: {},
+            cards: {},
+            config: {
+                incluirNormalizados: DOM.checkIncluirNormalizados.checked,
+                cardIdCounter: AppState.cardIdCounter,
+                totalOcorrenciasCriadas: AppState.totalOcorrenciasCriadas
+            }
+        };
+        document.querySelectorAll('.kanban-column .kanban-cards-container, #gaveta-arquivados .kanban-cards-container').forEach(container => {
+            const colunaId = container.closest('.kanban-column, #gaveta-arquivados').id;
+            estado.colunas[colunaId] = Array.from(container.querySelectorAll('.kanban-card')).map(card => card.id);
+        });
+        document.querySelectorAll('#tab-semaforo .kanban-card').forEach(card => {
+            estado.cards[card.id] = { ...card.dataset };
+        });
+        localStorage.setItem(AppState.STORAGE_KEY_SEMAFORO, JSON.stringify(estado));
+    },
+
+    carregarEstado() {
+        const estadoSalvo = localStorage.getItem(AppState.STORAGE_KEY_SEMAFORO);
+        if (!estadoSalvo) { this.atualizarPainel(); return; }
+        try {
+            const estado = JSON.parse(estadoSalvo);
+            document.querySelectorAll('#tab-semaforo .kanban-cards-container').forEach(c => c.innerHTML = '');
+            if (estado.cards && estado.colunas) {
+                Object.keys(estado.colunas).forEach(colunaId => {
+                    const containerParent = document.getElementById(colunaId);
+                    if (containerParent) {
+                        const cardContainer = containerParent.querySelector('.kanban-cards-container') || containerParent;
+                        estado.colunas[colunaId].forEach(cardId => {
+                            const cardData = estado.cards[cardId];
+                            if (cardData) {
+                                const cardElement = this.criarElementoCard(cardId, cardData);
+                                cardContainer.appendChild(cardElement);
                             }
                         });
                     }
-                    AppState.cardIdCounter = estado.config?.cardIdCounter || 0;
-                    AppState.totalOcorrenciasCriadas = estado.config?.totalOcorrenciasCriadas || 0;
-                    DOM.checkIncluirNormalizados.checked = estado.config?.incluirNormalizados || false;
-                    this.atualizarPainel();
-                } catch (error) {
-                    console.error("Erro ao carregar estado do semáforo:", error);
-                    localStorage.removeItem(AppState.STORAGE_KEY_SEMAFORO); // Limpa estado corrompido
-                }
-            },
-
-            handleVisualizarRelatorioClick() { 
-                const textoRelatorio = this.gerarPreviewRelatorio(); 
-                DOM.modalRelatorioTexto.value = textoRelatorio; 
-                abrirModal(DOM.modalRelatorio); 
-            },
-
-            handleCopiarModalClick() { 
-                navigator.clipboard.writeText(DOM.modalRelatorioTexto.value).then(() => { 
-                    fecharModal(DOM.modalRelatorio); 
-                    showToast('Relatório copiado!', 'success'); 
-                }); 
-            },
-
-            handleConfigChange() { 
-                this.gerarPreviewRelatorio(); 
-                this.salvarEstado(); 
-            },
-            
-            handleKanbanBoardClick(e) {
-                const cardElement = e.target.closest('.kanban-card');
-                if (!cardElement) return;
-
-                if (e.target.closest('.btn-card-action.dispatch')) {
-                    this.abrirModalDespacho(cardElement.id);
-                } else if (e.target.closest('.btn-card-action.edit')) {
-                    this.abrirModalEdicao(cardElement.id);
-                } else if (e.target.closest('.btn-card-action.complete')) {
-                    this.handleNormalizarClick(cardElement);
-                } else if (e.target.closest('.btn-card-action.copy-location')) {
-                    this.copiarLocalizacao(cardElement);
-                }
-            },
-
-            copiarLocalizacao(card) {
-                navigator.clipboard.writeText(`*${card.dataset.endereco}*`).then(() => {
-                    showToast('Localização copiada!', 'success');
                 });
-            },
+            }
+            AppState.cardIdCounter = estado.config?.cardIdCounter || 0;
+            AppState.totalOcorrenciasCriadas = estado.config?.totalOcorrenciasCriadas || 0;
+            DOM.checkIncluirNormalizados.checked = estado.config?.incluirNormalizados || false;
+            this.atualizarPainel();
+        } catch (error) {
+            console.error("Erro ao carregar estado do semáforo:", error);
+            localStorage.removeItem(AppState.STORAGE_KEY_SEMAFORO);
+        }
+    },
 
-            abrirModalDespacho(cardId) {
-                const card = document.getElementById(cardId);
-                if (!card) return;
-                DOM.despachoSemaforoCardId.value = cardId;
-                DOM.despachoSemaforoEquipe.value = card.dataset.equipe || '';
-                DOM.despachoSemaforoVt.value = card.dataset.viatura || '';
-                abrirModal(DOM.modalDespachoSemaforo);
-            },
+    handleVisualizarRelatorioClick() { 
+        const textoRelatorio = this.gerarPreviewRelatorio(); 
+        DOM.modalRelatorioTexto.value = textoRelatorio; 
+        abrirModal(DOM.modalRelatorio); 
+    },
 
-            handleSalvarDespachoClick() {
-                const cardId = DOM.despachoSemaforoCardId.value;
-                const card = document.getElementById(cardId);
-                if (!card) return;
+    handleCopiarModalClick() { 
+        navigator.clipboard.writeText(DOM.modalRelatorioTexto.value).then(() => { 
+            fecharModal(DOM.modalRelatorio); 
+            showToast('Relatório copiado!', 'success'); 
+        }); 
+    },
 
-                const equipe = DOM.despachoSemaforoEquipe.value.trim().toUpperCase();
-                const vt = DOM.despachoSemaforoVt.value.trim().toUpperCase();
+    handleConfigChange() { 
+        this.gerarPreviewRelatorio(); 
+        this.salvarEstado(); 
+    },
+    
+    handleKanbanBoardClick(e) {
+        const cardElement = e.target.closest('.kanban-card');
+        if (!cardElement) return;
 
-                card.dataset.equipe = equipe;
-                card.dataset.viatura = vt;
+        if (e.target.closest('.btn-card-action.dispatch')) {
+            this.abrirModalDespacho(cardElement.id);
+        } else if (e.target.closest('.btn-card-action.edit')) {
+            this.abrirModalEdicao(cardElement.id);
+        } else if (e.target.closest('.btn-card-action.complete')) {
+            this.handleNormalizarClick(cardElement);
+        } else if (e.target.closest('.btn-card-action.copy-location')) {
+            this.copiarLocalizacao(cardElement);
+        }
+    },
 
-                const despachoInfoDiv = card.querySelector('.card-despacho-info');
-                if (equipe || vt) {
-                    despachoInfoDiv.innerHTML = `<strong>Equipe:</strong> ${equipe || 'N/I'} | <strong>VT:</strong> ${vt || 'N/I'}`;
-                    despachoInfoDiv.style.display = 'block';
-                } else {
-                    despachoInfoDiv.style.display = 'none';
-                }
+    copiarLocalizacao(card) {
+        navigator.clipboard.writeText(`*${card.dataset.endereco}*`).then(() => {
+            showToast('Localização copiada!', 'success');
+        });
+    },
 
-                fecharModal(DOM.modalDespachoSemaforo);
-                this.atualizarPainel();
-                showToast('Despacho salvo!', 'success');
-                registrarAcao(`Equipe despachada para o card '${card.dataset.codigo}': Equipe ${equipe || 'N/I'}, VT ${vt || 'N/I'}.`);
-            },
+    abrirModalDespacho(cardId) {
+        const card = document.getElementById(cardId);
+        if (!card) return;
+        DOM.despachoSemaforoCardId.value = cardId;
+        DOM.despachoSemaforoEquipe.value = card.dataset.equipe || '';
+        DOM.despachoSemaforoVt.value = card.dataset.viatura || '';
+        abrirModal(DOM.modalDespachoSemaforo);
+    },
 
-            handleNormalizarClick(cardElement) {
-                DOM.colunaNormalizados.appendChild(cardElement);
-                this.atualizarPainel();
-                showToast(`Ocorrência ${cardElement.dataset.codigo} normalizada!`, 'success');
-                registrarAcao(`Card Semafórico '${cardElement.dataset.codigo}' movido para 'Normalizados'.`);
-            },
+    handleSalvarDespachoClick() {
+        const cardId = DOM.despachoSemaforoCardId.value;
+        const card = document.getElementById(cardId);
+        if (!card) return;
 
-            abrirModalEdicao(cardId) {
-                const card = document.getElementById(cardId);
-                if (!card) return;
-                DOM.edicaoCardId.value = cardId;
-                DOM.edicaoCodigo.value = card.dataset.codigo;
-                DOM.edicaoEndereco.value = card.dataset.endereco;
-                DOM.edicaoProblema.value = card.dataset.problema;
-                abrirModal(DOM.modalEdicao);
-            },
+        const equipe = DOM.despachoSemaforoEquipe.value.trim().toUpperCase();
+        const vt = DOM.despachoSemaforoVt.value.trim().toUpperCase();
 
-            handleSalvarEdicaoClick() {
-                const cardId = DOM.edicaoCardId.value;
-                const card = document.getElementById(cardId);
-                if (!card) return;
-                const novoEndereco = DOM.edicaoEndereco.value.trim();
-                const novoProblema = DOM.edicaoProblema.value;
-                if (!novoEndereco) { showToast('Endereço não pode ser vazio.', 'error'); return; }
+        card.dataset.equipe = equipe;
+        card.dataset.viatura = vt;
 
-                const dadosAntigos = `Endereço: ${card.dataset.endereco}, Problema: ${card.dataset.problema}`;
-                card.dataset.endereco = novoEndereco;
-                card.dataset.problema = novoProblema;
-                
-                card.querySelector('.card-body').textContent = novoEndereco;
-                card.querySelector('.card-status-tag').textContent = novoProblema;
-                
-                fecharModal(DOM.modalEdicao);
-                this.atualizarPainel();
-                showToast('Ocorrência editada!', 'success');
-                registrarAcao(`Card Semafórico '${card.dataset.codigo}' editado. Dados antigos: ${dadosAntigos}.`);
-            },
+        const despachoInfoDiv = card.querySelector('.card-despacho-info');
+        if (equipe || vt) {
+            despachoInfoDiv.innerHTML = `<strong>Equipe:</strong> ${equipe || 'N/I'} | <strong>VT:</strong> ${vt || 'N/I'}`;
+            despachoInfoDiv.style.display = 'block';
+        } else {
+            despachoInfoDiv.style.display = 'none';
+        }
+
+        fecharModal(DOM.modalDespachoSemaforo);
+        this.atualizarPainel();
+        showToast('Despacho salvo!', 'success');
+        registrarAcao(`Equipe despachada para o card '${card.dataset.codigo}': Equipe ${equipe || 'N/I'}, VT ${vt || 'N/I'}.`);
+    },
+
+    handleNormalizarClick(cardElement) {
+        DOM.colunaNormalizados.appendChild(cardElement);
+        this.atualizarPainel();
+        showToast(`Ocorrência ${cardElement.dataset.codigo} normalizada!`, 'success');
+        registrarAcao(`Card Semafórico '${cardElement.dataset.codigo}' movido para 'Normalizados'.`);
+    },
+
+    abrirModalEdicao(cardId) {
+        const card = document.getElementById(cardId);
+        if (!card) return;
+        DOM.edicaoCardId.value = cardId;
+        DOM.edicaoCodigo.value = card.dataset.codigo;
+        DOM.edicaoEndereco.value = card.dataset.endereco;
+        DOM.edicaoProblema.value = card.dataset.problema;
+        abrirModal(DOM.modalEdicao);
+    },
+
+    handleSalvarEdicaoClick() {
+        const cardId = DOM.edicaoCardId.value;
+        const card = document.getElementById(cardId);
+        if (!card) return;
+        const novoEndereco = DOM.edicaoEndereco.value.trim();
+        const novoProblema = DOM.edicaoProblema.value;
+        if (!novoEndereco) { showToast('Endereço não pode ser vazio.', 'error'); return; }
+
+        const dadosAntigos = `Endereço: ${card.dataset.endereco}, Problema: ${card.dataset.problema}`;
+        card.dataset.endereco = novoEndereco;
+        card.dataset.problema = novoProblema;
+        
+        card.querySelector('.card-body').textContent = novoEndereco;
+        card.querySelector('.card-status-tag').textContent = novoProblema;
+        
+        fecharModal(DOM.modalEdicao);
+        this.atualizarPainel();
+        showToast('Ocorrência editada!', 'success');
+        registrarAcao(`Card Semafórico '${card.dataset.codigo}' editado. Dados antigos: ${dadosAntigos}.`);
+    },
 
     toggleGaveta(forceState) {
-    const shouldBeOpen = forceState !== undefined ? forceState : !DOM.gavetaArquivados.classList.contains('open');
-    DOM.gavetaArquivados.classList.toggle('open', shouldBeOpen);
-    DOM.kanbanWrapper.classList.toggle('gaveta-open', shouldBeOpen);
-    
-    // Esconde botão de abrir quando gaveta está aberta
-    const btnAbrir = document.getElementById('btn-abrir-gaveta');
-    if (btnAbrir) {
-        btnAbrir.classList.toggle('hidden', shouldBeOpen);
-    }
-},
+        const shouldBeOpen = forceState !== undefined ? forceState : !DOM.gavetaArquivados.classList.contains('open');
+        DOM.gavetaArquivados.classList.toggle('open', shouldBeOpen);
+        DOM.kanbanWrapper.classList.toggle('gaveta-open', shouldBeOpen);
+        
+        const btnAbrir = document.getElementById('btn-abrir-gaveta');
+        if (btnAbrir) {
+            btnAbrir.classList.toggle('hidden', shouldBeOpen);
+        }
+    },
 
-            cardExiste: (codigo) => document.querySelector(`#tab-semaforo .kanban-card[data-codigo='${codigo}']`) !== null,
+    cardExiste: (codigo) => document.querySelector(`#tab-semaforo .kanban-card[data-codigo='${codigo}']`) !== null,
 
-            handleDragStart(e) { 
-                if (e.target.classList.contains('kanban-card')) { 
-                    AppState.draggedCard = e.target; 
-                    AppState.placeholder = document.createElement('div'); 
-                    AppState.placeholder.className = 'drag-placeholder'; 
-                    AppState.placeholder.style.height = `${e.target.offsetHeight}px`; 
-                    setTimeout(() => e.target.classList.add('dragging'), 0); 
-                } 
-            },
+    handleDragStart(e) { 
+        if (e.target.classList.contains('kanban-card')) { 
+            AppState.draggedCard = e.target; 
+            AppState.placeholder = document.createElement('div'); 
+            AppState.placeholder.className = 'drag-placeholder'; 
+            AppState.placeholder.style.height = `${e.target.offsetHeight}px`; 
+            setTimeout(() => e.target.classList.add('dragging'), 0); 
+        } 
+    },
 
-            handleDragEnd(e) { 
-                if(AppState.draggedCard) { AppState.draggedCard.classList.remove('dragging'); } 
-                if(AppState.placeholder && AppState.placeholder.parentNode) { AppState.placeholder.parentNode.removeChild(AppState.placeholder); } 
-                AppState.draggedCard = null; 
-                AppState.placeholder = null; 
-                document.querySelectorAll('.kanban-cards-container.drag-over').forEach(c => c.classList.remove('drag-over')); 
-            },
+    handleDragEnd(e) { 
+        if(AppState.draggedCard) { AppState.draggedCard.classList.remove('dragging'); } 
+        if(AppState.placeholder && AppState.placeholder.parentNode) { AppState.placeholder.parentNode.removeChild(AppState.placeholder); } 
+        AppState.draggedCard = null; 
+        AppState.placeholder = null; 
+        document.querySelectorAll('.kanban-cards-container.drag-over').forEach(c => c.classList.remove('drag-over')); 
+    },
 
-            handleDragOver(e) { 
-                e.preventDefault(); 
-                const container = e.target.closest('.kanban-cards-container'); 
-                if (container && AppState.draggedCard && AppState.draggedCard.classList.contains('kanban-card')) { 
-                    container.classList.add('drag-over'); 
-                    const afterElement = this.getDragAfterElement(container, e.clientY); 
-                    if (afterElement == null) { 
-                        container.appendChild(AppState.placeholder); 
-                    } else { 
-                        container.insertBefore(AppState.placeholder, afterElement); 
-                    } 
-                } 
-            },
+    handleDragOver(e) { 
+        e.preventDefault(); 
+        const container = e.target.closest('.kanban-cards-container'); 
+        if (container && AppState.draggedCard && AppState.draggedCard.classList.contains('kanban-card')) { 
+            container.classList.add('drag-over'); 
+            const afterElement = this.getDragAfterElement(container, e.clientY); 
+            if (afterElement == null) { 
+                container.appendChild(AppState.placeholder); 
+            } else { 
+                container.insertBefore(AppState.placeholder, afterElement); 
+            } 
+        } 
+    },
 
-            getDragAfterElement(container, y) { 
-                const draggableElements = [...container.querySelectorAll('.kanban-card:not(.dragging)')]; 
-                return draggableElements.reduce((closest, child) => { 
-                    const box = child.getBoundingClientRect(); 
-                    const offset = y - box.top - box.height / 2; 
-                    if (offset < 0 && offset > closest.offset) { 
-                        return { offset: offset, element: child }; 
-                    } else { 
-                        return closest; 
-                    } 
-                }, { offset: Number.NEGATIVE_INFINITY }).element; 
-            },
+    getDragAfterElement(container, y) { 
+        const draggableElements = [...container.querySelectorAll('.kanban-card:not(.dragging)')]; 
+        return draggableElements.reduce((closest, child) => { 
+            const box = child.getBoundingClientRect(); 
+            const offset = y - box.top - box.height / 2; 
+            if (offset < 0 && offset > closest.offset) { 
+                return { offset: offset, element: child }; 
+            } else { 
+                return closest; 
+            } 
+        }, { offset: Number.NEGATIVE_INFINITY }).element; 
+    },
 
-            handleDragLeave(e) { 
-                const container = e.target.closest('.kanban-cards-container'); 
-                if(container) container.classList.remove('drag-over'); 
-            },
+    handleDragLeave(e) { 
+        const container = e.target.closest('.kanban-cards-container'); 
+        if(container) container.classList.remove('drag-over'); 
+    },
 
-            handleDrop(e) {
-                e.preventDefault();
-                const destinoContainer = e.target.closest('.kanban-cards-container');
-                if (destinoContainer && AppState.draggedCard && AppState.draggedCard.classList.contains('kanban-card')) {
-                    if (AppState.placeholder && AppState.placeholder.parentNode) {
-                        AppState.placeholder.parentNode.replaceChild(AppState.draggedCard, AppState.placeholder);
-                    } else {
-                        destinoContainer.appendChild(AppState.draggedCard);
-                    }
-                    this.atualizarPainel();
-                    showToast('Card movido!', 'success');
-
-                    try {
-                        const coluna = destinoContainer.closest('.kanban-column');
-                        const nomeColuna = coluna.querySelector('.kanban-column-header .header-text').textContent.trim();
-                        registrarAcao(`Card Semafórico '${AppState.draggedCard.dataset.codigo}' movido para '${nomeColuna}'.`);
-                    } catch (error) {
-                        console.error("Erro ao registrar ação de drop:", error);
-                        registrarAcao(`Card Semafórico '${AppState.draggedCard.dataset.codigo}' foi movido.`);
-                    }
-                }
-                if (destinoContainer) destinoContainer.classList.remove('drag-over');
-            },
-            
-            limparPainel() {
-                if (confirm("Tem certeza que deseja limpar TODOS os dados da aba SEMAFÓRICO?")) {
-                    localStorage.removeItem(AppState.STORAGE_KEY_SEMAFORO);
-                    document.querySelectorAll('#tab-semaforo .kanban-cards-container').forEach(c => c.innerHTML = '');
-                    if (DOM.relatorioFinalPreview) DOM.relatorioFinalPreview.value = '';
-                    AppState.cardIdCounter = 0;
-                    AppState.totalOcorrenciasCriadas = 0;
-                    this.atualizarPainel();
-                    showToast('Painel semafórico limpo!', 'success');
-                    registrarAcao('Painel Semafórico foi limpo.');
-                }
+    handleDrop(e) {
+        e.preventDefault();
+        const destinoContainer = e.target.closest('.kanban-cards-container');
+        if (destinoContainer && AppState.draggedCard && AppState.draggedCard.classList.contains('kanban-card')) {
+            if (AppState.placeholder && AppState.placeholder.parentNode) {
+                AppState.placeholder.parentNode.replaceChild(AppState.draggedCard, AppState.placeholder);
+            } else {
+                destinoContainer.appendChild(AppState.draggedCard);
             }
-        };
+            this.atualizarPainel();
+            showToast('Card movido!', 'success');
+
+            try {
+                const coluna = destinoContainer.closest('.kanban-column, #gaveta-arquivados');
+                const nomeColuna = coluna.querySelector('.kanban-column-header .header-text').textContent.trim();
+                registrarAcao(`Card Semafórico '${AppState.draggedCard.dataset.codigo}' movido para '${nomeColuna}'.`);
+            } catch (error) {
+                console.error("Erro ao registrar ação de drop:", error);
+                registrarAcao(`Card Semafórico '${AppState.draggedCard.dataset.codigo}' foi movido.`);
+            }
+        }
+        if (destinoContainer) destinoContainer.classList.remove('drag-over');
+    },
+    
+    limparPainel() {
+        if (confirm("Tem certeza que deseja limpar TODOS os dados da aba SEMAFÓRICO?")) {
+            localStorage.removeItem(AppState.STORAGE_KEY_SEMAFORO);
+            document.querySelectorAll('#tab-semaforo .kanban-cards-container').forEach(c => c.innerHTML = '');
+            if (DOM.relatorioFinalPreview) DOM.relatorioFinalPreview.value = '';
+            AppState.cardIdCounter = 0;
+            AppState.totalOcorrenciasCriadas = 0;
+            this.atualizarPainel();
+            showToast('Painel semafórico limpo!', 'success');
+            registrarAcao('Painel Semafórico foi limpo.');
+        }
+    }
+};
 
 
         const Turno = {
