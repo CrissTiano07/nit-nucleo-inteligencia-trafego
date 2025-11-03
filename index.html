@@ -289,6 +289,37 @@
     opacity: 1;
 }
 
+/* ADICIONE ESTE BLOCO AO SEU CSS */
+
+#gaveta-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+#gaveta-header .header-content {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+#gaveta-header .search-container {
+    flex-grow: 1;
+    transition: all 0.3s ease;
+}
+#gaveta-header .search-container input {
+    width: 100%;
+    padding: 6px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+/* Esconde o conteúdo do header quando a busca está ativa */
+#gaveta-header.search-active .header-content {
+    opacity: 0;
+    transform: scale(0.9);
+    width: 0;
+    pointer-events: none;
+}
 
 
     </style>
@@ -408,14 +439,20 @@
                                 </div>
                             </div>
                         </div>
-                        <div id="gaveta-arquivados">
-                            <div class="kanban-column-header">
-                                <span class="header-text">Normalizados</span>
-                                <span class="card-count" id="count-normalizados-gaveta">0</span>
-                                <button id="btn-toggle-arquivados" class="btn-icon" title="Fechar gaveta"><i class="fas fa-times"></i></button>
-                            </div>
-                            <div class="kanban-cards-container" id="coluna-normalizados"></div>
-                        </div>
+        <div id="gaveta-arquivados">
+            <div class="kanban-column-header" id="gaveta-header">
+                <div class="header-content">
+                    <span class="header-text">Normalizados</span>
+                    <span class="card-count" id="count-normalizados-gaveta">0</span>
+                </div>
+                <div class="search-container" style="display: none;">
+                    <input type="search" id="search-normalizados" placeholder="Buscar por código ou endereço...">
+                </div>
+                <button id="btn-toggle-search" class="btn-icon" title="Buscar Normalizados"><i class="fas fa-search"></i></button>
+                <button id="btn-toggle-arquivados" class="btn-icon" title="Fechar gaveta"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="kanban-cards-container" id="coluna-normalizados"></div>
+        </div>  
                         <!-- Botão para abrir gaveta (ANTES do fechamento de painel-operacional-wrapper) -->
                         <button id="btn-abrir-gaveta" class="btn-icon" style="position: absolute; top: 10px; right: 10px; z-index: 5; background-color: var(--color-primary); color: white;" title="Ver Normalizados">
                             <i class="fas fa-archive"></i>
@@ -1225,6 +1262,44 @@ const Semaforo = {
             }
         });
 
+        const btnToggleSearch = document.getElementById('btn-toggle-search');
+        const searchInput = document.getElementById('search-normalizados');
+        const gavetaHeader = document.getElementById('gaveta-header');
+        
+        // Adicione uma verificação para evitar erros se os elementos não existirem
+        if (btnToggleSearch && searchInput && gavetaHeader) {
+            const headerContent = gavetaHeader.querySelector('.header-content');
+            const searchContainer = gavetaHeader.querySelector('.search-container');
+
+            btnToggleSearch.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isSearchActive = gavetaHeader.classList.toggle('search-active');
+                if (isSearchActive) {
+                    headerContent.style.display = 'none';
+                    searchContainer.style.display = 'block';
+                    searchInput.focus();
+                    btnToggleSearch.innerHTML = '<i class="fas fa-times"></i>';
+                } else {
+                    headerContent.style.display = 'flex';
+                    searchContainer.style.display = 'none';
+                    searchInput.value = '';
+                    searchInput.dispatchEvent(new Event('input'));
+                    btnToggleSearch.innerHTML = '<i class="fas fa-search"></i>';
+                }
+            });
+
+            searchInput.addEventListener('input', () => {
+                const termo = searchInput.value.toLowerCase().trim();
+                const cards = DOM.colunaNormalizados.querySelectorAll('.kanban-card');
+                cards.forEach(card => {
+                    const codigo = card.dataset.codigo || '';
+                    const endereco = card.dataset.endereco || '';
+                    const visivel = codigo.includes(termo) || endereco.toLowerCase().includes(termo);
+                    card.style.display = visivel ? '' : 'none';
+                });
+            });
+        }
+
         const kanbanArea = document.querySelector('#tab-semaforo');
         kanbanArea.addEventListener('dragstart', this.handleDragStart.bind(this));
         kanbanArea.addEventListener('dragend', this.handleDragEnd.bind(this));
@@ -1272,13 +1347,20 @@ handleProcessarClick() {
         // ==================================================
         console.log("Executando Modo de Carga Inicial...");
         AppState.totalOcorrenciasCriadas = eventosValidos.length;
-        eventosValidos.forEach(cardData => {
-            let statusFinal = cardData.secao;
-            if (statusFinal === 'PENDENTE' && this.avaliarStatus(cardData) === 'SEM_NECESSIDADE') {
-                statusFinal = 'SEM_NECESSIDADE';
-            }
-            this.criarNovoCard(cardData, statusFinal);
-        });
+        // NOVO BLOCO PARA INSERIR NO LUGAR
+eventosValidos.forEach(cardData => {
+    const statusFinal = this.avaliarStatus(cardData);
+    const cardElement = this.criarElementoCard(`card-${AppState.cardIdCounter++}`, cardData);
+
+    if (statusFinal === 'NORMALIZADO') {
+        DOM.colunaNormalizados.prepend(cardElement);
+    } else if (statusFinal === 'SEM_NECESSIDADE') {
+        document.querySelector('#coluna-sem-necessidade .kanban-cards-container').appendChild(cardElement);
+    } else { // PENDENTE
+        document.querySelector('#coluna-espera .kanban-cards-container').appendChild(cardElement);
+    }
+});
+
         showToast(`${eventosValidos.length} ocorrência(s) processada(s).`, 'success');
 
     } else {
@@ -1310,8 +1392,7 @@ handleProcessarClick() {
             } else {
                 const statusAntigo = cardExistente.status;
                 if (statusAntigo !== 'NORMALIZADO' && statusNovoEvento === 'NORMALIZADO') {
-                    DOM.colunaNormalizados.appendChild(cardExistente.element);
-                    cardsAtualizados++;
+                    DOM.colunaNormalizados.prepend(cardExistente.element);                    cardsAtualizados++;
                     cardExistente.element.classList.add('card-foi-normalizado');
                     setTimeout(() => cardExistente.element.classList.remove('card-foi-normalizado'), 2000);
                 }
@@ -1609,7 +1690,7 @@ handleProcessarClick() {
     },
 
     handleNormalizarClick(cardElement) {
-        DOM.colunaNormalizados.appendChild(cardElement);
+        DOM.colunaNormalizados.prepend(cardElement);
         this.atualizarPainel();
         showToast(`Ocorrência ${cardElement.dataset.codigo} normalizada!`, 'success');
         registrarAcao(`Card Semafórico '${cardElement.dataset.codigo}' movido para 'Normalizados'.`);
