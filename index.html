@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel de Gestão Integrada v9.1 - Precisão Cirúrgica</title>
+    <title>Painel de Gestão Integrada v10.0 </title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -416,7 +416,7 @@
                             </div>
                             <div class="kanban-cards-container" id="coluna-normalizados"></div>
                         </div>
-                        <!-- Botão para abrir gaveta (ADICIONAR ANTES do fechamento de painel-operacional-wrapper) -->
+                        <!-- Botão para abrir gaveta (ANTES do fechamento de painel-operacional-wrapper) -->
                         <button id="btn-abrir-gaveta" class="btn-icon" style="position: absolute; top: 10px; right: 10px; z-index: 5; background-color: var(--color-primary); color: white;" title="Ver Normalizados">
                             <i class="fas fa-archive"></i>
                         </button>
@@ -785,7 +785,40 @@
         </div>
     </div>
 
-    <div id="toast-container"></div>
+    
+<!-- SUBSTITUA O MODAL DE ATUALIZAÇÃO EXISTENTE POR ESTE -->
+<div id="modal-whats-new" class="modal-overlay">
+    <div class="modal-container" style="max-width: 650px;">
+        <div class="modal-header" style="font-size: 20px;">
+            Painel Semafórico: Guia Rápido da v10.0
+        </div>
+        <div class="modal-body" style="padding-top: 16px;">
+            <p style="color: var(--color-text-secondary);">A partir desta versão, o processamento de relatórios foi automatizado. Siga os passos abaixo.</p>
+            <hr style="border-color: var(--color-border); margin: 16px 0;">
+
+            <h4 style="margin-bottom: 8px;">1. Carga Inicial do Painel</h4>
+            <ul style="margin-top: 0; padding-left: 20px; color: var(--color-text-secondary);">
+                <li>Com o painel limpo, cole o relatório e clique em <strong>"Processar"</strong>.</li>
+                <li><strong>Resultado:</strong> O sistema distribuirá os cards automaticamente entre <code>Pendentes</code>, <code>Sem Necessidade</code> e <code>Normalizados</code>.</li>
+            </ul>
+
+            <h4 style="margin-top: 24px; margin-bottom: 8px;">2. Atualização Durante o Turno</h4>
+            <ul style="margin-top: 0; padding-left: 20px; color: var(--color-text-secondary);">
+                <li>Cole um relatório atualizado e clique em <strong>"Processar"</strong> novamente.</li>
+                <li><strong>Resultado:</strong> Apenas ocorrências novas serão adicionadas e o status das existentes será atualizado, <strong>preservando seu trabalho</strong>.</li>
+            </ul>
+
+            <div style="margin-top: 24px; padding: 12px; background-color: var(--color-bg); border-radius: 6px; font-size: 13px;">
+                <p style="margin-top: 0;"><strong>Fase de Testes:</strong> Este novo fluxo está em validação. Se notar algo inesperado, <strong>reporte diretamente a mim.</strong></p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button id="btn-close-whats-new" class="btn btn-primario">Entendido</button>
+        </div>
+    </div>
+</div>
+
+
 
     <div id="toast-container"></div>
 
@@ -796,11 +829,11 @@
         'use strict';
 
         const AppState = {
-            STORAGE_KEY_SEMAFORO: 'gerador-premium-v9.1-semaforo',
-            STORAGE_KEY_TURNO: 'gerador-premium-v9.1-turno',
-            STORAGE_KEY_REBOQUES: 'gerador-premium-v9.1-reboques',
-            STORAGE_KEY_EVENTOS: 'gerador-premium-v9.1-eventos',
-            STORAGE_KEY_DADOS: 'gerador-premium-v9.1-dadosMestres',
+            STORAGE_KEY_SEMAFORO: 'gerador-premium-v10.0-semaforo',
+            STORAGE_KEY_TURNO: 'gerador-premium-v10.0-turno',
+            STORAGE_KEY_REBOQUES: 'gerador-premium-v10.0-reboques',
+            STORAGE_KEY_EVENTOS: 'gerador-premium-v10.0-eventos',
+            STORAGE_KEY_DADOS: 'gerador-premium-v10.0-dadosMestres',
             cardIdCounter: 0,
             totalOcorrenciasCriadas: 0,
             reboqueIdCounter: 0,
@@ -932,6 +965,27 @@
 
         function inicializarApp() {
             queryDOM();
+         // DENTRO DA FUNÇÃO inicializarApp()
+        const APP_VERSION = '10.0';
+        const ultimaVersaoVista = localStorage.getItem('appVersion');
+
+        if (ultimaVersaoVista !== APP_VERSION) {
+            const modal = document.getElementById('modal-whats-new');
+            const closeBtn = document.getElementById('btn-close-whats-new');
+            
+            if (modal && closeBtn) {
+                abrirModal(modal);
+                const fecharEAtualizarVersao = () => {
+                    fecharModal(modal);
+                    localStorage.setItem('appVersion', APP_VERSION);
+                };
+                closeBtn.addEventListener('click', fecharEAtualizarVersao);
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) fecharEAtualizarVersao();
+                });
+            }
+        }
+
             carregarDadosMestres();
 
             // PASSO 1: Remove a classe 'active' de todos os botões e conteúdos.
@@ -1005,7 +1059,7 @@
             setupModal(modalHistorico, document.getElementById('btn-historico-fechar'));
         }
 
-        showToast('Sistema v9.1 carregado com sucesso!', 'success');
+        showToast('Sistema v10.0 carregado com sucesso!', 'success');
     }
 
           
