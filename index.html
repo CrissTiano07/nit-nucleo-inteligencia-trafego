@@ -467,6 +467,14 @@
                                         <span class="header-text cor-atendimento"><i class="fas fa-clock"></i> Aguardando Atendimento</span>
                                         <span class="card-count" id="count-espera">0</span>
                                     </div>
+                                    <div class="kanban-column-filter">
+                                        <input
+                                        type="text"
+                                        class="kanban-search"
+                                        data-coluna="coluna-espera"
+                                        placeholder="Buscar nesta coluna"
+                                        />
+                                    </div>
                                     <div class="kanban-cards-container"></div>
                                 </div>
                                 <div class="kanban-column" id="coluna-sem-necessidade">
@@ -474,6 +482,15 @@
                                         <span class="header-text">Sem Necessidade</span>
                                         <span class="card-count" id="count-sem-necessidade">0</span>
                                     </div>
+                                        <div class="kanban-column-filter">
+                                            <input
+                                            type="text"
+                                            class="kanban-search"
+                                            data-coluna="coluna-sem-necessidade"
+                                            placeholder="Buscar nesta coluna"
+                                            />
+                                        </div>
+
                                     <div class="kanban-cards-container"></div>
                                 </div>
                                 <div class="kanban-column" id="coluna-vl">
@@ -1419,6 +1436,9 @@ const Semaforo = {
                 this.toggleGaveta(true); 
             });
         }
+
+        this.inicializarBuscaPorColuna();
+
         DOM.btnToggleArquivados.addEventListener('click', (e) => { e.stopPropagation(); this.toggleGaveta(false); });
         
         document.addEventListener('click', (e) => { 
@@ -1991,7 +2011,39 @@ eventosValidos.forEach(cardData => {
             showToast('Painel semafórico limpo!', 'success');
             registrarAcao('Painel Semafórico foi limpo.');
         }
-    }
+    },
+
+    /**
+    * Inicializa a busca por texto em cada coluna do kanban.
+    * A busca é aplicada apenas aos cards da coluna correspondente.
+    */
+    inicializarBuscaPorColuna() {
+    const inputs = document.querySelectorAll('.kanban-search');
+
+    inputs.forEach(input => {
+        input.addEventListener('input', () => {
+
+        // Termo digitado pelo usuário
+        const termo = input.value.trim().toLowerCase();
+
+        // Coluna associada ao campo de busca
+        const colunaId = input.dataset.coluna;
+        const coluna = document.getElementById(colunaId);
+        if (!coluna) return;
+
+        // Container de cards da coluna
+        const cardsContainer = coluna.querySelector('.kanban-cards-container');
+        if (!cardsContainer) return;
+
+        // Filtra apenas os cards desta coluna
+        Array.from(cardsContainer.children).forEach(card => {
+            const texto = card.innerText.toLowerCase();
+            card.style.display = texto.includes(termo) ? '' : 'none';
+        });
+        });
+    });
+    },
+
 };
 
 
