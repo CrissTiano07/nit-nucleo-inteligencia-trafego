@@ -373,6 +373,41 @@
     pointer-events: none;
 }
 
+/* Busca por coluna - correção de borda e contenção */
+
+.kanban-column {
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.kanban-column-filter {
+  padding: 6px 8px;
+  background: transparent;
+}
+
+.kanban-column-filter .kanban-search {
+  width: 100%;
+  box-sizing: border-box;
+  height: 28px;
+  padding: 4px 8px;
+  font-size: 13px;
+  font-family: var(--font-family-sans);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  outline: none;
+}
+
+.kanban-column-filter .kanban-search::placeholder {
+  color: var(--color-text-secondary);
+}
+
+.kanban-column-filter .kanban-search:focus {
+  border-color: var(--color-primary);
+  box-shadow: none;
+}
+
 
     </style>
 </head>
