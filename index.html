@@ -341,7 +341,6 @@
     opacity: 1;
 }
 
-/* ADICIONE ESTE BLOCO AO SEU CSS */
 
 #gaveta-header {
     display: flex;
@@ -407,6 +406,36 @@
   border-color: var(--color-primary);
   box-shadow: none;
 }
+
+/* Destaque dos normalizados do último processamento */
+.kanban-card.highlight-recente {
+    outline: 2px solid var(--color-primary); /* azul padrão do sistema */
+    outline-offset: -2px;
+}
+
+/* Indica ação disponível no contador de normalizados */
+.card-count.acao-disponivel {
+    cursor: pointer;
+    color: var(--color-primary);
+    font-weight: 600;
+}
+
+/* Badge de novos normalizados (convite visual) */
+.card-count.tem-novos {
+    position: relative;
+}
+
+.card-count.tem-novos::after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    right: -6px;
+    width: 8px;
+    height: 8px;
+    background-color: var(--color-primary); /* azul do sistema */
+    border-radius: 50%;
+}
+
 
 
     </style>
@@ -1214,6 +1243,7 @@
                 edicaoAlagamentoTipo: document.getElementById('edicao-alagamento-tipo'),
                 btnEdicaoAlagamentoCancelar: document.getElementById('btn-edicao-alagamento-cancelar'),
                 btnEdicaoAlagamentoSalvar: document.getElementById('btn-edicao-alagamento-salvar'),
+
             };
             Object.assign(DOM, elements);
         }
@@ -1454,15 +1484,29 @@
   // SUBSTITUA TODO O SEU OBJETO "const Semaforo = { ... };" POR ESTE BLOCO COMPLETO:
 
 const Semaforo = {
+    ultimoLoteNormalizado: [],
     inicializar() {
         this.carregarEstado();
         DOM.btnProcessar.addEventListener('click', this.handleProcessarClick.bind(this));
+        this.inicializarBuscaPorColuna();
+        if (DOM.countNormalizadosGaveta) {
+    DOM.countNormalizadosGaveta.addEventListener('click', (e) => {
+    e.stopPropagation();
+    this.destacarUltimosNormalizados();
+    DOM.countNormalizadosGaveta.classList.remove('tem-novos');
+
+    });
+}
+
+
         
         DOM.btnEdicaoSalvar.addEventListener('click', this.handleSalvarEdicaoClick.bind(this));
         DOM.btnDespachoSemaforoConfirmar.addEventListener('click', this.handleSalvarDespachoClick.bind(this));
         DOM.btnVisualizarRelatorio.addEventListener('click', this.handleVisualizarRelatorioClick.bind(this));
         DOM.checkIncluirNormalizados.addEventListener('change', this.handleConfigChange.bind(this));
         DOM.btnModalCopiar.addEventListener('click', this.handleCopiarModalClick.bind(this));
+
+        
         
         const btnAbrirGaveta = document.getElementById('btn-abrir-gaveta');
         if (btnAbrirGaveta) {
@@ -1472,7 +1516,12 @@ const Semaforo = {
             });
         }
 
+       
+
+        
+
         this.inicializarBuscaPorColuna();
+        
 
         DOM.btnToggleArquivados.addEventListener('click', (e) => { e.stopPropagation(); this.toggleGaveta(false); });
         
@@ -1480,8 +1529,12 @@ const Semaforo = {
             const btnAbrirGaveta = document.getElementById('btn-abrir-gaveta');
             if (DOM.gavetaArquivados.classList.contains('open') && !DOM.gavetaArquivados.contains(e.target) && !DOM.btnToggleArquivados.contains(e.target) && (!btnAbrirGaveta || !btnAbrirGaveta.contains(e.target))) {
                 this.toggleGaveta(false);
-            }
+            } 
+            
         });
+
+        
+        
 
         const btnToggleSearch = document.getElementById('btn-toggle-search');
         const searchInput = document.getElementById('search-normalizados');
@@ -1530,8 +1583,9 @@ const Semaforo = {
         kanbanArea.addEventListener('click', this.handleKanbanBoardClick.bind(this));
     },
 
-    // SUBSTITUA A FUNÇÃO handleProcessarClick PELA VERSÃO ABAIXO:
+    // FUNÇÃO handleProcessarClick:
 handleProcessarClick() {
+    this.ultimoLoteNormalizado = [];
     const textoBruto = DOM.relatorioBrutoInput.value;
     if (!textoBruto.trim()) {
         showToast('Insira o relatório bruto para processar.', 'warning');
@@ -1575,7 +1629,8 @@ eventosValidos.forEach(cardData => {
 
     if (statusFinal === 'NORMALIZADO') {
         DOM.colunaNormalizados.prepend(cardElement);
-    } else if (statusFinal === 'SEM_NECESSIDADE') {
+        this.ultimoLoteNormalizado.push(cardElement.id);
+        } else if (statusFinal === 'SEM_NECESSIDADE') {
         document.querySelector('#coluna-sem-necessidade .kanban-cards-container').appendChild(cardElement);
     } else { // PENDENTE
         document.querySelector('#coluna-espera .kanban-cards-container').appendChild(cardElement);
@@ -1613,10 +1668,16 @@ eventosValidos.forEach(cardData => {
             } else {
                 const statusAntigo = cardExistente.status;
                 if (statusAntigo !== 'NORMALIZADO' && statusNovoEvento === 'NORMALIZADO') {
-                    DOM.colunaNormalizados.prepend(cardExistente.element);                    cardsAtualizados++;
+                    DOM.colunaNormalizados.prepend(cardExistente.element);
+                    cardsAtualizados++;
+
+                    // REGISTRA NO ÚLTIMO LOTE
+                    this.ultimoLoteNormalizado.push(cardExistente.element.id);
+
                     cardExistente.element.classList.add('card-foi-normalizado');
                     setTimeout(() => cardExistente.element.classList.remove('card-foi-normalizado'), 2000);
                 }
+
             }
         });
         
@@ -1632,6 +1693,17 @@ eventosValidos.forEach(cardData => {
             showToast('Nenhuma mudança detectada no relatório.', 'info');
         }
     }
+
+    if (this.ultimoLoteNormalizado.length > 0 && DOM.countNormalizadosGaveta) {
+    DOM.countNormalizadosGaveta.classList.add('acao-disponivel');
+}
+
+
+    // Indica que há novos normalizados para revisão
+    if (this.ultimoLoteNormalizado.length > 0 && DOM.countNormalizadosGaveta) {
+        DOM.countNormalizadosGaveta.classList.add('tem-novos');
+}
+
 
     // --- FINALIZAÇÃO (COMUM A AMBOS OS MODOS) ---
     this.atualizarPainel();
@@ -2079,7 +2151,26 @@ eventosValidos.forEach(cardData => {
     });
     },
 
-};
+                /**
+        * Destaca os cards normalizados no último processamento.
+        */
+        destacarUltimosNormalizados() {
+            // Remove qualquer destaque anterior
+            document.querySelectorAll('.kanban-card.highlight-recente')
+                .forEach(card => card.classList.remove('highlight-recente'));
+
+            // Aplica destaque ao último lote
+            this.ultimoLoteNormalizado.forEach(cardId => {
+                const card = document.getElementById(cardId);
+                if (card) {
+                    card.classList.add('highlight-recente');
+                }
+            });
+        },
+
+
+
+        };
 
 
         const Turno = {
