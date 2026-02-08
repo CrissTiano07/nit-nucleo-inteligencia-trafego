@@ -1481,7 +1481,6 @@
     }
 }
 
-  // SUBSTITUA TODO O SEU OBJETO "const Semaforo = { ... };" POR ESTE BLOCO COMPLETO:
 
 const Semaforo = {
     ultimoLoteNormalizado: [],
@@ -1623,9 +1622,9 @@ handleProcessarClick() {
         console.log("Executando Modo de Carga Inicial...");
         AppState.totalOcorrenciasCriadas = eventosValidos.length;
         // NOVO BLOCO PARA INSERIR NO LUGAR
-eventosValidos.forEach(cardData => {
-    const statusFinal = this.avaliarStatus(cardData);
-    const cardElement = this.criarElementoCard(`card-${AppState.cardIdCounter++}`, cardData);
+    eventosValidos.forEach(cardData => {
+        const statusFinal = this.avaliarStatus(cardData);
+        const cardElement = this.criarElementoCard(`card-${AppState.cardIdCounter++}`, cardData);
 
     if (statusFinal === 'NORMALIZADO') {
         DOM.colunaNormalizados.prepend(cardElement);
@@ -1729,27 +1728,29 @@ eventosValidos.forEach(cardData => {
     },
 
     extrairDadosDaLinha(linha) {
-        const match = linha.match(/(?:([A-Z\s]+)\s*)?🚦\s*(\d{3,4})\s*🚦\s*(.*?)\s*●\s*([A-ZÀ-Ú\s/]+)(.*)/i);
-        if (!match) return null;
+    const isInvestigando = /^INVESTIGANDO\s/i.test(linha);
+    const match = linha.match(/(?:([A-Z\s]+)\s*)?🚦\s*(\d{3,4})\s*🚦\s*(.*?)\s*●\s*([A-ZÀ-Ú\s/]+)(.*)/i);
+    if (!match) return null;
 
-        const dados = {
-            tipo: (match[1] || 'N/I').trim(),
-            codigo: match[2].trim(),
-            endereco: match[3].trim().replace(/\s+/g, ' '),
-            problema: match[4].trim().toUpperCase(),
-            inicio: '',
-            fim: '',
-            observacoes: (match[5] || '').trim()
-        };
+    const dados = {
+        tipo: isInvestigando ? 'INVESTIGANDO' : (match[1] || 'N/I').trim(),      // ✅ USA isInvestigando
+        status: isInvestigando ? 'INVESTIGANDO' : (match[1] || '').trim(),       // ✅ USA isInvestigando
+        codigo: match[2].trim(),
+        endereco: match[3].trim().replace(/\s+/g, ' '),
+        problema: match[4].trim().toUpperCase(),
+        inicio: '',
+        fim: '',
+        observacoes: isInvestigando ? '' : (match[5] || '').trim()               // ✅ USA isInvestigando
+    };
 
-        const fimMatch = linha.match(/Fim:\s*([^\t\n]+)/i);
-        if (fimMatch) dados.fim = fimMatch[1].trim();
+    const fimMatch = linha.match(/Fim:\s*([^\t\n]+)/i);
+    if (fimMatch) dados.fim = fimMatch[1].trim();
 
-        const inicioMatch = linha.match(/Início:\s*([^\t\n]+)/i);
-        if (inicioMatch) dados.inicio = inicioMatch[1].trim();
+    const inicioMatch = linha.match(/Início:\s*([^\t\n]+)/i);
+    if (inicioMatch) dados.inicio = inicioMatch[1].trim();
 
-        return dados;
-    },
+    return dados;
+},
 
     avaliarStatus(cardData) {
         if (cardData.fim && cardData.fim.trim() !== '') {
@@ -1770,7 +1771,48 @@ eventosValidos.forEach(cardData => {
         return 'PENDENTE';
     },
 
+
+
+    // Função auxiliar - normaliza datas
+normalizarDatas(texto) {
+    if (!texto || typeof texto !== 'string') return '';
+    // Remove ano: "05/02/2026 04:14" → "05/02 04:14"
+    return texto.replace(/(\d{2}\/\d{2})\/\d{4}(\s+\d{2}:\d{2})/g, '$1$2');
+},
+
+// Função principal
+extrairFraseTecnica(texto, status, inicio) {
+    
+    // INVESTIGANDO - já está correto
+    if (String(status).trim().toUpperCase() === 'INVESTIGANDO') {
+        if (!inicio) return 'Investigando.';
+        const [data, hora] = inicio.split(' ');
+        const [dia, mes] = data.split('/');
+        return `Início: ${dia}/${mes} ${hora} Investigando.`;
+    }
+
+    // Outros casos
+    if (!texto || typeof texto !== 'string') {
+        return '';
+    }
+
+    let textoLimpo = texto
+        .replace(/\*/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    // 🎯 NORMALIZA TODAS AS DATAS
+    textoLimpo = this.normalizarDatas(textoLimpo);
+
+    // Primeira frase
+    const match = textoLimpo.match(/^[^.]+?\./);
+    return match ? match[0].trim() : textoLimpo;
+},
+
+
     criarElementoCard(cardId, cardData) {
+        console.log('🔴 VERSÃO DO CÓDIGO:', '2025-02-08-v2'); // ← ADICIONE ISSO
+        console.log('📦 cardData recebido:', cardData);
         const card = document.createElement('div');
         card.id = cardId;
         card.className = 'kanban-card';
@@ -1781,9 +1823,50 @@ eventosValidos.forEach(cardData => {
             ? `<div class="card-despacho-info"><strong>Equipe:</strong> ${cardData.equipe || 'N/I'} | <strong>VT:</strong> ${cardData.viatura || 'N/I'}</div>` 
             : '<div class="card-despacho-info" style="display:none;"></div>';
 
+        // REGRA DETERMINÍSTICA — INVESTIGANDO
+        if (String(cardData.tipo).trim().toUpperCase() === 'INVESTIGANDO') {
+            console.log('🟢 INVESTIGANDO detectado!');
+            console.log('   inicio:', cardData.inicio);
+            console.log('   observacoes ANTES:', cardData.observacoes);
+            cardData.observacoes = '';
+            console.log('   observacoes DEPOIS:', cardData.observacoes);
+
+        }
+
+
+        let fraseTecnica = '';
+
+        if (String(cardData.tipo).trim().toUpperCase() === 'INVESTIGANDO') {
+            if (cardData.inicio) {
+                const [data, hora] = cardData.inicio.split(' ');
+                console.log('   data:', data, '| hora:', hora);
+                const [dia, mes] = data.split('/');
+                console.log('   dia:', dia, '| mes:', mes);
+                fraseTecnica = `Início: ${dia}/${mes} ${hora} Investigando.`;
+                console.log('   fraseTecnica gerada:', fraseTecnica);
+            } else {
+                fraseTecnica = 'Investigando.';
+            }
+        } else {
+            fraseTecnica = this.extrairFraseTecnica(
+                cardData.observacoes,
+                cardData.tipo,
+                cardData.inicio
+            );
+        }
+
+
+
+
+
         card.innerHTML = `
+
             <div class="card-header"><strong>${cardData.codigo}</strong><span class="card-status-tag">${cardData.problema}</span></div>
-            <div class="card-body">${cardData.endereco}</div>
+            <div class="card-body">
+                <div class="card-endereco">${cardData.endereco}</div>
+                ${fraseTecnica ? `<div class="card-frase-tecnica">${fraseTecnica}</div>` : ''}
+            </div>
+
             ${despachoInfoHTML}
             <div class="card-footer">
                 <button class="btn-card-action copy-location" title="Copiar Localização"><i class="fa-solid fa-location-crosshairs"></i></button>
@@ -1943,10 +2026,17 @@ eventosValidos.forEach(cardData => {
     },
 
     copiarLocalizacao(card) {
-        navigator.clipboard.writeText(`*${card.dataset.endereco}*`).then(() => {
-            showToast('Localização copiada!', 'success');
-        });
-    },
+    const codigo = card.dataset.codigo || '';
+    const endereco = card.dataset.endereco || '';
+    const problema = card.dataset.problema || '';
+
+    const textoCopiar = `*${codigo}🚦 ${endereco} ● ${problema}*`;
+
+    navigator.clipboard.writeText(textoCopiar).then(() => {
+        showToast('Localização copiada!', 'success');
+    });
+},
+
 
     abrirModalDespacho(cardId) {
         const card = document.getElementById(cardId);
@@ -2011,7 +2101,19 @@ eventosValidos.forEach(cardData => {
         card.dataset.endereco = novoEndereco;
         card.dataset.problema = novoProblema;
         
-        card.querySelector('.card-body').textContent = novoEndereco;
+        const body = card.querySelector('.card-body');
+        const fraseTecnica = this.extrairFraseTecnica(
+        card.dataset.observacoes,
+        card.dataset.status,
+        card.dataset.inicio
+    );
+
+
+        body.innerHTML = `
+            <div class="card-endereco">${novoEndereco}</div>
+            ${fraseTecnica ? `<div class="card-frase-tecnica">${fraseTecnica}</div>` : ''}
+        `;
+
         card.querySelector('.card-status-tag').textContent = novoProblema;
         
         fecharModal(DOM.modalEdicao);
@@ -2170,7 +2272,7 @@ eventosValidos.forEach(cardData => {
 
 
 
-        };
+};
 
 
         const Turno = {
