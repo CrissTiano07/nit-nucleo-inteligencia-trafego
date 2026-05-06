@@ -1905,42 +1905,76 @@ extrairFraseTecnica(texto, status, inicio) {
     },
 
     gerarPreviewRelatorio() {
-        const incluirNormalizados = DOM.checkIncluirNormalizados.checked;
-        const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '.');
-        let texto = `*RELATÓRIO DE ATENDIMENTO SEMAFÓRICO – ${hoje}*\n` +
-                    `*Ocorrências (${DOM.displayTotal.textContent})*\n` +
-                    `*Pendentes (${DOM.displayPendentes.textContent})*\n` +
-                    `*Normalizados (${DOM.displayNormalizados.textContent})*\n\n`;
-        
-        const getCardText = (card) => {
-            let cardText = `${card.dataset.codigo} 🚦 ${card.dataset.endereco} ● ${card.dataset.problema}`;
-            if (card.dataset.equipe || card.dataset.viatura) {
-                cardText += ` (Equipe: ${card.dataset.equipe || 'N/I'}, VT: ${card.dataset.viatura || 'N/I'})`;
-            }
-            return cardText;
-        };
+    const incluirNormalizados = DOM.checkIncluirNormalizados.checked;
 
-        const secoes = {
-            '*ATENDIDOS PELO VIA LIVRE (EM ANDAMENTO):*': Array.from(document.querySelectorAll('#coluna-vl .kanban-card')).map(getCardText),
-            '*ATENDIDOS PELA AMC (EM ANDAMENTO):*': Array.from(document.querySelectorAll('#coluna-amc .kanban-card')).map(getCardText),
-        };
-        Object.entries(secoes).forEach(([titulo, itens]) => {
-            if (itens.length > 0) texto += `${titulo}\n${itens.join('\n')}\n\n`;
-        });
-        const aguardandoTecnica = Array.from(document.querySelectorAll('#coluna-espera .kanban-card')).map(getCardText);
-        const semNecessidade = Array.from(document.querySelectorAll('#coluna-sem-necessidade .kanban-card')).map(getCardText);
-        if (aguardandoTecnica.length > 0 || semNecessidade.length > 0) {
-            texto += `*PENDENTES / OUTROS MOTIVOS*\n`;
-            if (aguardandoTecnica.length > 0) texto += `*- - Aguardando atendimento:*\n${aguardandoTecnica.join('\n')}\n`;
-            if (semNecessidade.length > 0) texto += `\n*- - Sem necessidade de operação:*\n${semNecessidade.join('\n')}\n`;
+    // Data e hora
+    const agora = new Date();
+    const hora  = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const data  = agora.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+                       .replace(/\//g, '.');
+
+    // Contadores atuais
+    const totalOcorrencias = parseInt(DOM.displayTotal.textContent)       || 0;
+    const totalNormalizados= parseInt(DOM.displayNormalizados.textContent) || 0;
+    const totalPendentes   = parseInt(DOM.displayPendentes.textContent)    || 0;
+
+    // Indicador de status baseado em pendentes em espera
+    const espera = document.querySelectorAll('#coluna-espera .kanban-card').length;
+    let statusEmoji, statusSufixo;
+    if (espera <= 3) {
+        statusEmoji  = '🟢🟢';
+        statusSufixo = '✅';
+    } else if (espera <= 7) {
+        statusEmoji  = '🟡🟡';
+        statusSufixo = '⚠️';
+    } else {
+        statusEmoji  = '🔴🔴';
+        statusSufixo = '🚨';
+    }
+
+    const linha = '----------';
+    let texto = `${statusEmoji} STATUS SEMAFÓRICO ${statusEmoji}\n` +
+                `${linha} ${hora} - ${data} ${linha}\n\n` +
+                `*Ocorrências (${totalOcorrencias})*\n` +
+                `*Pendentes (${totalPendentes})* ${statusSufixo}\n` +
+                `*Normalizados (${totalNormalizados})*\n`;
+
+    const getCardText = (card) => {
+        let t = `${card.dataset.codigo} 🚦 ${card.dataset.endereco} ● ${card.dataset.problema}`;
+        if (card.dataset.equipe || card.dataset.viatura) {
+            t += ` (Equipe: ${card.dataset.equipe || 'N/I'}, VT: ${card.dataset.viatura || 'N/I'})`;
         }
-        if (incluirNormalizados) {
-            const normalizados = Array.from(DOM.colunaNormalizados.querySelectorAll('.kanban-card')).map(getCardText);
-            if (normalizados.length > 0) texto += `\n*NORMALIZADOS:*\n${normalizados.join('\n')}\n`;
-        }
-        DOM.relatorioFinalPreview.value = texto.trim();
-        return DOM.relatorioFinalPreview.value;
-    },
+        return t;
+    };
+
+    const vlCards  = Array.from(document.querySelectorAll('#coluna-vl .kanban-card')).map(getCardText);
+    const amcCards = Array.from(document.querySelectorAll('#coluna-amc .kanban-card')).map(getCardText);
+
+    if (vlCards.length > 0 || amcCards.length > 0) {
+        texto += `\n---\n`;
+        if (vlCards.length  > 0) texto += `\n🚓🟡 *VIA LIVRE (${vlCards.length}):*\n${vlCards.join('\n')}\n`;
+        if (amcCards.length > 0) texto += `\n🚓🔵 *AMC (${amcCards.length}):*\n${amcCards.join('\n')}\n`;
+    }
+
+    const aguardando   = Array.from(document.querySelectorAll('#coluna-espera .kanban-card')).map(getCardText);
+    const semNecessidade = Array.from(document.querySelectorAll('#coluna-sem-necessidade .kanban-card')).map(getCardText);
+
+    if (aguardando.length > 0 || semNecessidade.length > 0) {
+        texto += `\n---\n\n⏳ *PENDENTES / OUTROS MOTIVOS*\n`;
+        if (aguardando.length > 0)
+            texto += `*- Aguardando atendimento:*\n${aguardando.join('\n')}\n`;
+        if (semNecessidade.length > 0)
+            texto += `\n*- Sem necessidade de operação:*\n${semNecessidade.join('\n')}\n`;
+    }
+
+    if (incluirNormalizados) {
+        const norm = Array.from(DOM.colunaNormalizados.querySelectorAll('.kanban-card')).map(getCardText);
+        if (norm.length > 0) texto += `\n---\n\n✅ *NORMALIZADOS (${norm.length}):*\n${norm.join('\n')}\n`;
+    }
+
+    DOM.relatorioFinalPreview.value = texto.trim();
+    return DOM.relatorioFinalPreview.value;
+},
 
     salvarEstado() {
         const estado = {
