@@ -1986,7 +1986,7 @@ extrairFraseTecnica(texto, status, inicio) {
                 totalOcorrenciasCriadas: AppState.totalOcorrenciasCriadas
             }
         };
-        document.querySelectorAll('.kanban-column .kanban-cards-container, #gaveta-arquivados .kanban-cards-container').forEach(container => {
+        document.querySelectorAll('#tab-semaforo .kanban-column .kanban-cards-container, #gaveta-arquivados .kanban-cards-container').forEach(container => {
             const colunaId = container.closest('.kanban-column, #gaveta-arquivados').id;
             estado.colunas[colunaId] = Array.from(container.querySelectorAll('.kanban-card')).map(card => card.id);
         });
