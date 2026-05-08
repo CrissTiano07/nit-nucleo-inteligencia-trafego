@@ -1,788 +1,1647 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Painel Operacional NIT - Supervisor</title>
-    <style>
-        :root {
-            --bg: #0d1117;
-            --bg2: #161b22;
-            --bg3: #21262d;
-            --bg4: #2d333b;
-            --b1: rgba(255, 255, 255, 0.06);
-            --b2: rgba(255, 255, 255, 0.11);
-            --b3: rgba(255, 255, 255, 0.18);
-            --t1: #e6edf3;
-            --t2: #8b949e;
-            --t3: #6e7681;
-            --red: #f85149;
-            --red-bg: rgba(248, 81, 73, 0.11);
-            --red-b: rgba(248, 81, 73, 0.28);
-            --grn: #3fb950;
-            --grn-bg: rgba(63, 185, 80, 0.10);
-            --grn-b: rgba(63, 185, 80, 0.28);
-            --org: #f0883e;
-            --org-bg: rgba(240, 136, 62, 0.12);
-            --org-b: rgba(240, 136, 62, 0.32);
-            --blu: #58a6ff;
-            --blu-bg: rgba(88, 166, 255, 0.11);
-            --blu-b: rgba(88, 166, 255, 0.30);
-            --amb: #e3b341;
-            --amb-bg: rgba(227, 179, 65, 0.10);
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        body {
-            background: var(--bg);
-            color: var(--t1);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            line-height: 1.5;
-            min-height: 100vh;
-        }
-
-        #app {
-            width: 100%;
-            max-width: 600px; /* Aumentado para melhor visualização em tablets, mas ainda focado em mobile */
-            margin: 0 auto;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            background: var(--bg);
-        }
-
-        /* Topbar Responsiva */
-        .topbar {
-            background: var(--bg2);
-            border-bottom: 1px solid var(--b2);
-            padding: 1rem;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .topbar-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 0.75rem;
-        }
-
-        .topbar-title {
-            font-size: 0.9rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .topbar-sub {
-            font-size: 0.75rem;
-            color: var(--t3);
-            font-weight: 400;
-        }
-
-        .topbar-time {
-            font-size: 0.8rem;
-            color: var(--t2);
-        }
-
-        .stats-row {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 0.5rem;
-        }
-
-        .stat {
-            background: var(--bg3);
-            border-radius: 8px;
-            padding: 0.5rem;
-            text-align: center;
-            border: 1px solid var(--b1);
-        }
-
-        .stat-n {
-            font-size: 1.1rem;
-            font-weight: 700;
-        }
-
-        .stat-l {
-            font-size: 0.65rem;
-            color: var(--t3);
-            text-transform: uppercase;
-            margin-top: 0.2rem;
-        }
-
-        /* Labels de Área */
-        .area-label {
-            font-size: 0.7rem;
-            font-weight: 600;
-            color: var(--t3);
-            text-transform: uppercase;
-            letter-spacing: 0.05rem;
-            padding: 1rem 1rem 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .area-label::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: var(--b2);
-        }
-
-        /* Playlists e Cards */
-        .pls {
-            padding: 0 0.75rem 1.5rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-        }
-
-        .pl {
-            background: var(--bg2);
-            border-radius: 12px;
-            border: 1px solid var(--b1);
-            overflow: hidden;
-        }
-
-        .pl-head {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem 1rem;
-            cursor: pointer;
-        }
-
-        .pl-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.1rem;
-        }
-
-        .pl-info {
-            flex: 1;
-        }
-
-        .pl-name {
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-
-        .pl-desc {
-            font-size: 0.75rem;
-            color: var(--t3);
-        }
-
-        .pl-ct {
-            font-size: 1.1rem;
-            font-weight: 700;
-        }
-
-        .pl-chev {
-            font-size: 0.8rem;
-            color: var(--t3);
-            transition: transform 0.2s;
-        }
-
-        .pl.open > .pl-head .pl-chev {
-            transform: rotate(90deg);
-        }
-
-        .pl-body {
-            display: none;
-            border-top: 1px solid var(--b1);
-        }
-
-        .pl.open > .pl-body {
-            display: block;
-        }
-
-        /* Tracks (Ocorrências) */
-        .track {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem 1rem;
-            border-top: 1px solid var(--b1);
-            cursor: pointer;
-        }
-
-        .track:first-child { border-top: none; }
-
-        .tk-code {
-            font-size: 0.7rem;
-            font-weight: 700;
-            background: rgba(255, 255, 255, 0.05);
-            padding: 0.2rem 0.4rem;
-            border-radius: 4px;
-            color: var(--t2);
-        }
-
-        .tk-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-        }
-
-        .tk-dot.blink {
-            animation: blink 1.2s infinite;
-        }
-
-        @keyframes blink {
-            0% { opacity: 1; }
-            50% { opacity: 0.3; }
-            100% { opacity: 1; }
-        }
-
-        .tk-loc {
-            flex: 1;
-            font-size: 0.85rem;
-            font-weight: 500;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .tk-time {
-            font-size: 0.75rem;
-            color: var(--t3);
-        }
-
-        /* Detalhes e Formulário */
-        .detail, .dispatch-form {
-            display: none;
-            padding: 1rem;
-            background: var(--bg3);
-            border-top: 1px solid var(--b2);
-        }
-
-        .detail.show, .dispatch-form.show {
-            display: block;
-        }
-
-        .det-prob {
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: var(--t2);
-            text-transform: uppercase;
-            margin-bottom: 0.75rem;
-        }
-
-        .det-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.5rem;
-            margin-bottom: 0.75rem;
-        }
-
-        .det-f {
-            background: var(--bg2);
-            padding: 0.5rem;
-            border-radius: 6px;
-            border: 1px solid var(--b1);
-        }
-
-        .det-f.full { grid-column: span 2; }
-
-        .det-l {
-            font-size: 0.65rem;
-            color: var(--t3);
-            text-transform: uppercase;
-            margin-bottom: 0.2rem;
-        }
-
-        .det-v {
-            font-size: 0.8rem;
-            font-weight: 500;
-        }
-
-        .det-obs {
-            background: var(--bg2);
-            padding: 0.75rem;
-            border-radius: 6px;
-            font-size: 0.8rem;
-            color: var(--t2);
-            border: 1px solid var(--b1);
-            margin-bottom: 0.75rem;
-        }
-
-        .det-acts, .df-acts {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .act, .df-btn {
-            flex: 1;
-            padding: 0.6rem 0;
-            border-radius: 6px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            border: 1px solid;
-            cursor: pointer;
-            text-align: center;
-        }
-
-        .act-copy { background: var(--bg2); border-color: var(--b3); color: var(--t2); }
-        .act-norm { background: var(--grn-bg); border-color: var(--grn-b); color: var(--grn); }
-        .act-desp { background: var(--blu-bg); border-color: var(--blu-b); color: var(--blu); }
-
-        /* Formulário de Despacho */
-        .df-title {
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: var(--blu);
-            text-transform: uppercase;
-            margin-bottom: 0.75rem;
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-        }
-
-        .df-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.5rem;
-            margin-bottom: 0.75rem;
-        }
-
-        .df-field { display: flex; flex-direction: column; gap: 0.25rem; }
-
-        .df-label { font-size: 0.65rem; color: var(--t3); text-transform: uppercase; }
-
-        .df-input {
-            background: var(--bg2);
-            border: 1px solid var(--b2);
-            border-radius: 6px;
-            padding: 0.5rem;
-            color: var(--t1);
-            font-size: 0.85rem;
-            outline: none;
-            width: 100%;
-        }
-
-        .df-input:focus { border-color: var(--blu); }
-
-        .df-confirm { background: var(--blu-bg); border-color: var(--blu-b); color: var(--blu); }
-        .df-cancel { background: transparent; border-color: var(--b2); color: var(--t3); }
-        .df-wpp { background: rgba(37, 211, 102, 0.1); border-color: rgba(37, 211, 102, 0.3); color: #25d366; flex: 1.2; }
-
-        /* Integração NIT */
-        .nit-bridge {
-            background: var(--bg2);
-            margin: 0 0.75rem 1.5rem;
-            border-radius: 12px;
-            border: 1px solid var(--b2);
-            overflow: hidden;
-        }
-
-        .nit-bridge-head {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.75rem 1rem;
-            border-bottom: 1px solid var(--b1);
-        }
-
-        .nit-badge {
-            font-size: 0.65rem;
-            font-weight: 700;
-            padding: 0.15rem 0.4rem;
-            border-radius: 4px;
-            background: rgba(88, 166, 255, 0.15);
-            color: var(--blu);
-            border: 1px solid var(--blu-b);
-        }
-
-        .nit-bridge-title { font-size: 0.8rem; font-weight: 600; flex: 1; }
-
-        .nit-status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--grn);
-        }
-
-        .nit-status-dot.syncing {
-            animation: sync-pulse 1s infinite;
-        }
-
-        @keyframes sync-pulse {
-            0% { background: var(--grn); transform: scale(1); }
-            50% { background: #fff; transform: scale(1.3); }
-            100% { background: var(--grn); transform: scale(1); }
-        }
-
-        .nit-status-lbl { font-size: 0.75rem; color: var(--grn); }
-
-        .nit-rows { padding: 0.75rem 1rem; display: flex; flex-direction: column; gap: 0.4rem; }
-
-        .nit-row { display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; }
-
-        .nit-row-l { color: var(--t2); }
-
-        .nit-row-r { font-weight: 600; }
-
-        .nit-sync {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0.75rem 1rem;
-            border-top: 1px solid var(--b1);
-            background: rgba(255, 255, 255, 0.02);
-        }
-
-        .nit-sync-lbl { font-size: 0.7rem; color: var(--t3); }
-
-        .nit-sync-btn {
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: var(--blu);
-            padding: 0.3rem 0.75rem;
-            border: 1px solid var(--blu-b);
-            border-radius: 6px;
-            background: var(--blu-bg);
-            cursor: pointer;
-        }
-
-        /* Subseções */
-        .sub { border-top: 1px solid var(--b1); }
-        .sub-head { display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1rem; cursor: pointer; }
-        .sub-tag { font-size: 0.65rem; font-weight: 700; padding: 0.15rem 0.4rem; border-radius: 4px; }
-        .sub-label { font-size: 0.75rem; font-weight: 600; flex: 1; text-transform: uppercase; }
-        .sub-chev { font-size: 0.75rem; color: var(--t3); transition: transform 0.2s; }
-        .sub.open .sub-chev { transform: rotate(90deg); }
-        .sub-items { display: none; }
-        .sub.open .sub-items { display: block; }
-        .sub-rule { height: 1px; background: var(--b1); margin: 0 1rem; }
-
-        /* Media Queries para Telas Maiores */
-        @media (min-width: 600px) {
-            body { padding: 2rem 0; }
-            #app { border-radius: 16px; border: 1px solid var(--b2); min-height: auto; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>NIT · Supervisor</title>
+<style>
+/* ══════════════════════════════════════════════════════════════
+   TOKENS
+══════════════════════════════════════════════════════════════ */
+*, *::before, *::after {
+  box-sizing: border-box; margin: 0; padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+:root {
+  /* superfícies */
+  --s0: #0a0e14;
+  --s1: #101720;
+  --s2: #18222e;
+  --s3: #1f2d3d;
+  --s4: #263545;
+
+  /* bordas */
+  --b0: rgba(100,160,230,.05);
+  --b1: rgba(100,160,230,.10);
+  --b2: rgba(100,160,230,.18);
+
+  /* texto */
+  --tx1: #d8e8f5;
+  --tx2: #6e90b0;
+  --tx3: #3a566e;
+
+  /* AZUL — ativo, institucional, AMC */
+  --blu:    #4A9EFF;
+  --blu-dk: #2f7ad4;
+  --blu-bg: rgba(74,158,255,.10);
+  --blu-bd: rgba(74,158,255,.26);
+
+  /* LARANJA — urgência, Via Livre, aguardando */
+  --org:    #F5883A;
+  --org-dk: #c96820;
+  --org-bg: rgba(245,136,58,.10);
+  --org-bd: rgba(245,136,58,.26);
+
+  /* CINZA — arquivado/normalizado */
+  --arc:    #4a6070;
+  --arc-bg: rgba(74,96,112,.10);
+  --arc-bd: rgba(74,96,112,.22);
+
+  /* notificação / badge */
+  --badge: #F5883A;
+
+  /* layout */
+  --bar-h:  56px;   /* topbar */
+  --srch-h: 44px;   /* barra de busca */
+  --tab-h:  44px;   /* sub-filtros */
+  --nav-h:  60px;   /* menu inferior */
+  --r:      10px;
+  --r-sm:    6px;
+  --touch:  48px;
+}
+
+html { background: var(--s0); }
+body {
+  background: var(--s0);
+  color: var(--tx1);
+  font-family: -apple-system, 'SF Pro Text', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SHELL — tela inteira dividida em regiões fixas
+══════════════════════════════════════════════════════════════ */
+#app {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: var(--s0);
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  flex-shrink: 0;
+  height: var(--bar-h);
+  background: var(--s1);
+  border-bottom: 1px solid var(--b1);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  z-index: 90;
+}
+.tb-logo {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: var(--blu-bg);
+  border: 1.5px solid var(--blu-bd);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.tb-info { flex: 1; min-width: 0; }
+.tb-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--tx1);
+  letter-spacing: -.2px;
+  line-height: 1.1;
+}
+.tb-status {
+  font-size: 11px;
+  color: var(--tx3);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 1px;
+}
+.tb-live-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--blu);
+  animation: livepulse 2.5s ease-out infinite;
+}
+@keyframes livepulse {
+  0%   { box-shadow: 0 0 0 0   rgba(74,158,255,.6); }
+  60%  { box-shadow: 0 0 0 5px rgba(74,158,255,0);  }
+  100% { box-shadow: 0 0 0 0   rgba(74,158,255,0);  }
+}
+.tb-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.tb-time {
+  font-size: 12px;
+  color: var(--tx2);
+  font-variant-numeric: tabular-nums;
+}
+.tb-icon-btn {
+  position: relative;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: background .12s;
+}
+.tb-icon-btn:active { background: var(--s3); }
+.tb-badge {
+  position: absolute;
+  top: 4px; right: 4px;
+  min-width: 16px; height: 16px;
+  border-radius: 8px;
+  background: var(--badge);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 3px;
+  border: 1.5px solid var(--s1);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── STATS SUPERIORES — cor alinhada ao estado ── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+  padding: 0 16px 10px;
+}
+.stat {
+  background: var(--s2);
+  border: 1px solid var(--b0);
+  border-radius: var(--r-sm);
+  padding: 7px 4px;
+  text-align: center;
+  border-top: 2px solid transparent;
+  transition: border-color .3s, opacity .3s;
+}
+/* quando zero: apaga visualmente */
+.stat.dim { opacity: .35; }
+
+/* borda-topo e número coloridos por estado */
+.stat.s-esp  { border-top-color: var(--org); }
+.stat.s-atd-vl { border-top-color: var(--org); }
+.stat.s-atd-amc { border-top-color: var(--blu); }
+.stat.s-nrm  { border-top-color: var(--arc); }
+.stat.s-tot  { border-top-color: var(--b2); }
+
+.stat-n {
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  transition: color .3s;
+}
+.stat-l {
+  font-size: 9px;
+  color: var(--tx3);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* bump ao mudar número */
+@keyframes stat-bump {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.22); }
+  100% { transform: scale(1); }
+}
+.stat-n.bump { animation: stat-bump .28s ease-out; }
+
+/* ── BARRA DE BUSCA ── */
+.search-bar {
+  flex-shrink: 0;
+  height: var(--srch-h);
+  background: var(--s1);
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--b0);
+}
+.search-inner {
+  height: 100%;
+  background: var(--s2);
+  border: 1px solid var(--b1);
+  border-radius: 22px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 8px;
+}
+.search-inner svg { flex-shrink: 0; }
+.search-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--tx1);
+  font-size: 13px;
+  font-family: inherit;
+  caret-color: var(--blu);
+}
+.search-input::placeholder { color: var(--tx3); }
+
+/* ── SUB-FILTROS (tab-bar horizontal) ── */
+/* (stats-row definido acima) */
+.filter-bar {
+  flex-shrink: 0;
+  height: var(--tab-h);
+  background: var(--s1);
+  border-bottom: 1px solid var(--b1);
+  display: flex;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  gap: 4px;
+  padding: 0 12px;
+  align-items: center;
+}
+.filter-bar::-webkit-scrollbar { display: none; }
+
+.f-tab {
+  flex-shrink: 0;
+  height: 30px;
+  padding: 0 13px;
+  border-radius: 15px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--b1);
+  background: transparent;
+  color: var(--tx2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition: all .15s;
+  letter-spacing: .1px;
+}
+.f-tab:active { opacity: .7; }
+.f-tab.active {
+  background: var(--blu-bg);
+  border-color: var(--blu-bd);
+  color: var(--blu);
+}
+.f-tab.active.org-tab {
+  background: var(--org-bg);
+  border-color: var(--org-bd);
+  color: var(--org);
+}
+.f-count {
+  background: rgba(255,255,255,.08);
+  border-radius: 9px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  min-width: 18px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.f-tab.active .f-count {
+  background: rgba(74,158,255,.18);
+}
+.f-tab.active.org-tab .f-count {
+  background: rgba(245,136,58,.18);
+}
+
+/* ── LISTA — área de scroll central ── */
+.list-wrap {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  background: var(--s0);
+}
+.list-wrap::-webkit-scrollbar { width: 3px; }
+.list-wrap::-webkit-scrollbar-thumb { background: var(--b2); border-radius: 2px; }
+
+/* separador de data/grupo */
+.date-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 16px 6px;
+}
+.date-divider span {
+  background: var(--s2);
+  border: 1px solid var(--b1);
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--tx3);
+  padding: 3px 10px;
+  letter-spacing: .3px;
+  text-transform: uppercase;
+}
+
+/* ── ITEM DE OCORRÊNCIA (linha estilo conversa) ── */
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--b0);
+  cursor: pointer;
+  transition: background .1s;
+  position: relative;
+}
+.item:active, .item.open { background: var(--s2); }
+.item:last-child { border-bottom: none; }
+
+/* AVATAR — onde antes havia foto, agora mostra identificador */
+.av {
+  width: 46px; height: 46px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .2px;
+  line-height: 1.15;
+  text-align: center;
+  border: 2px solid transparent;
+  /* indicador de urgência na borda */
+  position: relative;
+}
+/* estado: aguardando */
+.av.esp {
+  background: var(--org-bg);
+  border-color: var(--org-bd);
+  color: var(--org);
+}
+.av.esp::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid var(--org);
+  opacity: .4;
+  animation: ring-blink 1.3s ease-out infinite;
+}
+@keyframes ring-blink {
+  0%,100% { opacity: .4; transform: scale(1); }
+  50%      { opacity: 0;  transform: scale(1.12); }
+}
+/* estado: VL (Via Livre) */
+.av.vl {
+  background: var(--org-bg);
+  border-color: var(--org-bd);
+  color: var(--org);
+}
+/* estado: AMC */
+.av.amc {
+  background: var(--blu-bg);
+  border-color: var(--blu-bd);
+  color: var(--blu);
+}
+/* estado: arquivado */
+.av.arc {
+  background: var(--arc-bg);
+  border-color: var(--arc-bd);
+  color: var(--arc);
+  opacity: .7;
+}
+
+.av-line1 { font-size: 11px; font-weight: 800; }
+.av-line2 { font-size: 9px; font-weight: 600; opacity: .8; margin-top: 1px; }
+
+/* conteúdo principal do item */
+.item-body { flex: 1; min-width: 0; }
+
+.item-row1 {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+.item-cod {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--tx1);
+  flex-shrink: 0;
+  letter-spacing: -.1px;
+}
+.item-time {
+  font-size: 11px;
+  color: var(--tx3);
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* nome do cruzamento — linha principal de contexto */
+.item-loc {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--tx1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 3px;
+  line-height: 1.3;
+}
+
+/* linha de metadados — abaixo do título, estilo "último status" */
+.item-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+.item-prob {
+  font-size: 11px;
+  color: var(--tx2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+.item-tag {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: var(--r-sm);
+  letter-spacing: .3px;
+  white-space: nowrap;
+}
+.tag-esp { background: var(--org-bg); border: 1px solid var(--org-bd); color: var(--org); }
+.tag-vl  { background: var(--org-bg); border: 1px solid var(--org-bd); color: var(--org); }
+.tag-amc { background: var(--blu-bg); border: 1px solid var(--blu-bd); color: var(--blu); }
+.tag-arc { background: var(--arc-bg); border: 1px solid var(--arc-bd); color: var(--arc); }
+
+/* badge de notificação no item (não lido) */
+.item-badge {
+  position: absolute;
+  top: 12px; right: 14px;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--org);
+}
+
+/* ── ENTRADA DE NOVO ITEM — slide+fade ── */
+@keyframes item-enter {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.item.novo-anim {
+  animation: item-enter .32s cubic-bezier(.22,.68,0,1.2) both;
+}
+
+/* anel pulsante extra-visível para novo */
+.av.esp.novo::after {
+  border-color: var(--org);
+  opacity: .65;
+  animation: ring-blink .8s ease-out infinite;
+}
+
+/* ── PAINEL DE DETALHE (inline, expande abaixo do item) ── */
+.detail-panel {
+  display: none;
+  background: var(--s2);
+  border-bottom: 1px solid var(--b1);
+}
+.detail-panel.show { display: block; }
+
+.dp-inner { padding: 14px; }
+
+/* cabeçalho do detalhe */
+.dp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.dp-prob {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--tx2);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.dp-close {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--s3);
+  border: 1px solid var(--b1);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  color: var(--tx3);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.dp-close:active { background: var(--s4); }
+
+/* grade de campos */
+.dp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+.dp-f {
+  background: var(--s3);
+  border: 1px solid var(--b0);
+  border-radius: var(--r-sm);
+  padding: 7px 9px;
+}
+.dp-f.full { grid-column: 1 / -1; }
+.dp-l {
+  font-size: 9px;
+  color: var(--tx3);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 3px;
+}
+.dp-v {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tx1);
+  word-break: break-word;
+}
+
+/* observações */
+.dp-obs {
+  background: var(--s3);
+  border: 1px solid var(--b0);
+  border-radius: var(--r-sm);
+  padding: 9px 11px;
+  font-size: 12px;
+  color: var(--tx2);
+  line-height: 1.55;
+  margin-bottom: 12px;
+  border-left: 2px solid var(--org-bd);
+}
+
+/* botões de ação do detalhe */
+.dp-acts {
+  display: flex;
+  gap: 6px;
+}
+.dp-btn {
+  flex: 1;
+  height: 40px;
+  border-radius: var(--r-sm);
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  gap: 5px;
+  letter-spacing: .1px;
+  transition: opacity .1s;
+}
+.dp-btn:active { opacity: .7; }
+.btn-copy  { background: var(--s3);    border-color: var(--b2);    color: var(--tx2); }
+.btn-desp  { background: var(--blu-bg); border-color: var(--blu-bd); color: var(--blu); }
+.btn-norm  { background: var(--org-bg); border-color: var(--org-bd); color: var(--org); }
+.btn-reab  { background: var(--arc-bg); border-color: var(--arc-bd); color: var(--arc); }
+
+/* ── FORM DE DESPACHO ── */
+.dispatch-panel {
+  display: none;
+  background: var(--s2);
+  border-bottom: 1px solid var(--b1);
+}
+.dispatch-panel.show { display: block; }
+
+.dsp-inner { padding: 14px; }
+.dsp-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--blu);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 12px;
+  display: flex; align-items: center; gap: 6px;
+}
+.dsp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.dsp-field { display: flex; flex-direction: column; gap: 4px; }
+.dsp-label {
+  font-size: 9px;
+  color: var(--tx3);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.dsp-input {
+  background: var(--s3);
+  border: 1px solid var(--b1);
+  border-radius: var(--r-sm);
+  padding: 0 10px;
+  height: 40px;
+  color: var(--tx1);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  width: 100%;
+  transition: border-color .15s;
+}
+.dsp-input::placeholder { color: var(--tx3); }
+.dsp-input:focus { border-color: var(--blu); }
+
+.dsp-sub-row {
+  margin-bottom: 10px;
+}
+.dsp-sub-label {
+  font-size: 9px;
+  color: var(--tx3);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 6px;
+}
+.dsp-sub-opts {
+  display: flex;
+  gap: 6px;
+}
+.dsp-sub-opt {
+  flex: 1;
+  height: 36px;
+  border-radius: var(--r-sm);
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--b1);
+  background: var(--s3);
+  color: var(--tx2);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.dsp-sub-opt.sel-vl  { background: var(--org-bg); border-color: var(--org-bd); color: var(--org); }
+.dsp-sub-opt.sel-amc { background: var(--blu-bg); border-color: var(--blu-bd); color: var(--blu); }
+
+.dsp-acts { display: flex; gap: 6px; }
+.dsp-btn {
+  flex: 1;
+  height: 40px;
+  border-radius: var(--r-sm);
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  gap: 5px;
+  transition: opacity .1s;
+}
+.dsp-btn:active { opacity: .7; }
+.dsp-cancel  { background: transparent;   border-color: var(--b1);    color: var(--tx3); }
+.dsp-confirm { background: var(--blu-bg); border-color: var(--blu-bd); color: var(--blu); flex: 1.4; }
+.dsp-wpp     {
+  background: rgba(37,211,102,.08);
+  border-color: rgba(37,211,102,.22);
+  color: #25d366;
+  flex: 1.4;
+}
+
+/* ── MENU INFERIOR ── */
+.nav {
+  flex-shrink: 0;
+  height: var(--nav-h);
+  background: var(--s1);
+  border-top: 1px solid var(--b1);
+  display: flex;
+  align-items: stretch;
+  z-index: 90;
+}
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+  transition: background .12s;
+  position: relative;
+}
+.nav-item:active { background: var(--s2); }
+.nav-item.active .nav-icon { color: var(--blu); }
+.nav-item.active .nav-lbl  { color: var(--blu); }
+.nav-icon { font-size: 20px; color: var(--tx3); transition: color .15s; line-height: 1; }
+.nav-lbl {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--tx3);
+  letter-spacing: .2px;
+  transition: color .15s;
+}
+.nav-badge {
+  position: absolute;
+  top: 6px;
+  right: calc(50% - 16px);
+  min-width: 16px; height: 16px;
+  border-radius: 8px;
+  background: var(--org);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 3px;
+  border: 1.5px solid var(--s1);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PAINÉIS DE ABA (Equipes / NIT / Config)
+══════════════════════════════════════════════════════════════ */
+.tab-panel {
+  flex: 1;
+  display: none;
+  overflow-y: auto;
+  padding: 16px 14px;
+  flex-direction: column;
+  gap: 14px;
+}
+.tab-panel.active { display: flex; }
+
+/* ── Equipes ── */
+.team-card {
+  background: var(--s1);
+  border: 1px solid var(--b1);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+.team-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+}
+.team-av {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800;
+  flex-shrink: 0;
+}
+.team-av.blu { background: var(--blu-bg); border: 1.5px solid var(--blu-bd); color: var(--blu); }
+.team-av.org { background: var(--org-bg); border: 1.5px solid var(--org-bd); color: var(--org); }
+.team-av.arc { background: var(--arc-bg); border: 1.5px solid var(--arc-bd); color: var(--arc); opacity:.7; }
+.team-info { flex: 1; min-width: 0; }
+.team-name { font-size: 13px; font-weight: 700; color: var(--tx1); }
+.team-sub  { font-size: 11px; color: var(--tx2); margin-top: 2px; }
+.team-status {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+/* ── NIT ── */
+.nit-row-item {
+  background: var(--s1);
+  border: 1px solid var(--b1);
+  border-radius: var(--r);
+  padding: 12px 14px;
+}
+.nit-row-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--tx3);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 10px;
+}
+.nit-kv {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--b0);
+  font-size: 13px;
+}
+.nit-kv:last-child { border-bottom: none; padding-bottom: 0; }
+.nit-k { color: var(--tx2); }
+.nit-v { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.sync-row {
+  background: var(--s1);
+  border: 1px solid var(--b1);
+  border-radius: var(--r);
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.sync-info { display: flex; align-items: center; gap: 8px; }
+.sync-dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--blu);
+  transition: background .3s;
+}
+.sync-dot.syncing {
+  background: var(--org);
+  animation: syncpulse 1s ease-out infinite;
+}
+@keyframes syncpulse {
+  0%   { box-shadow: 0 0 0 0   rgba(245,136,58,.6); }
+  60%  { box-shadow: 0 0 0 5px rgba(245,136,58,0);  }
+  100% { box-shadow: 0 0 0 0   rgba(245,136,58,0);  }
+}
+.sync-lbl { font-size: 12px; color: var(--tx2); }
+.sync-time { font-size: 11px; color: var(--tx3); font-variant-numeric: tabular-nums; }
+.sync-btn {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--blu);
+  padding: 6px 14px;
+  border: 1px solid var(--blu-bd);
+  border-radius: 20px;
+  background: var(--blu-bg);
+  cursor: pointer;
+  transition: opacity .1s;
+}
+.sync-btn:active { opacity: .7; }
+
+/* ── Config ── */
+.cfg-section {
+  background: var(--s1);
+  border: 1px solid var(--b1);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+.cfg-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--tx3);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  padding: 10px 14px 6px;
+  border-bottom: 1px solid var(--b0);
+}
+.cfg-row {
+  display: flex;
+  align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--b0);
+  gap: 12px;
+}
+.cfg-row:last-child { border-bottom: none; }
+.cfg-icon {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  background: var(--s2);
+  border: 1px solid var(--b1);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+.cfg-info { flex: 1; }
+.cfg-name { font-size: 13px; font-weight: 500; color: var(--tx1); }
+.cfg-desc { font-size: 11px; color: var(--tx3); margin-top: 1px; }
+.cfg-chev { font-size: 13px; color: var(--tx3); }
+
+/* ══════════════════════════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════════════════════════ */
+#toast {
+  position: fixed;
+  bottom: calc(var(--nav-h) + 12px);
+  left: 50%; transform: translateX(-50%) translateY(10px);
+  background: var(--s4);
+  border: 1px solid var(--b2);
+  border-radius: 22px;
+  padding: 8px 18px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tx1);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s, transform .2s;
+  z-index: 999;
+  max-width: 90%;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ══════════════════════════════════════════════════════════════
+   TABLET — enquadra como app
+══════════════════════════════════════════════════════════════ */
+@media (min-width: 520px) {
+  body { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #050810; padding: 16px; }
+  #app { border-radius: 20px; border: 1px solid var(--b1); overflow: hidden; height: min(100dvh, 820px); box-shadow: 0 28px 72px rgba(0,0,0,.65); }
+}
+</style>
 </head>
 <body>
-    <div id="app">
-        <header class="topbar">
-            <div class="topbar-row">
-                <div class="topbar-title">
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#e3b341" stroke-width="1.5"></circle><circle cx="8" cy="8" r="3" fill="#e3b341"></circle></svg>
-                    Painel Operacional <span class="topbar-sub">· Supervisor</span>
-                </div>
-                <span class="topbar-time" id="clk">--:--</span>
-            </div>
-            <div class="stats-row">
-                <div class="stat"><div class="stat-n" style="color:var(--t1)" id="s-tot">0</div><div class="stat-l">Total</div></div>
-                <div class="stat"><div class="stat-n" style="color:var(--red)" id="s-esp">0</div><div class="stat-l">Aguardando</div></div>
-                <div class="stat"><div class="stat-n" style="color:var(--amb)" id="s-atd">0</div><div class="stat-l">Atendendo</div></div>
-                <div class="stat"><div class="stat-n" style="color:var(--grn)" id="s-nrm">0</div><div class="stat-l">Normaliz.</div></div>
-            </div>
-        </header>
+<div id="app">
 
-        <main>
-            <div class="area-label">Ocorrências</div>
-            <div class="pls" id="pls">
-                <!-- Conteúdo dinâmico via JS -->
-            </div>
-
-            <div class="area-label">Integração NIT</div>
-            <section class="nit-bridge">
-                <div class="nit-bridge-head">
-                    <span class="nit-badge">NIT v12</span>
-                    <span class="nit-bridge-title">Painel de Gestão Integrada</span>
-                    <div class="nit-status-dot" id="sync-dot"></div>
-                    <span class="nit-status-lbl">Ativo</span>
-                </div>
-                <div class="nit-rows">
-                    <div class="nit-row"><span class="nit-row-l">Kanban Semáforo</span><span class="nit-row-r">tab-semaforo</span></div>
-                    <div class="nit-row"><span class="nit-row-l">Aguardando</span><span class="nit-row-r" style="color:var(--red)" id="ni-esp">0</span></div>
-                    <div class="nit-row"><span class="nit-row-l">Via Livre</span><span class="nit-row-r" style="color:var(--org)" id="ni-vl">0</span></div>
-                    <div class="nit-row"><span class="nit-row-l">AMC</span><span class="nit-row-r" style="color:var(--blu)" id="ni-amc">0</span></div>
-                    <div class="nit-row"><span class="nit-row-l">Normalizados</span><span class="nit-row-r" style="color:var(--grn)" id="ni-nrm">0</span></div>
-                    <div class="nit-row"><span class="nit-row-l">Última sincronização</span><span class="nit-row-r" id="ni-sync">--:--</span></div>
-                </div>
-                <div class="nit-sync">
-                    <span class="nit-sync-lbl">Sincronia em tempo real ativa</span>
-                    <button class="nit-sync-btn" onclick="simSync()">Sincronizar Agora</button>
-                </div>
-            </section>
-        </main>
+  <!-- ══ TOPBAR ════════════════════════════════════════════ -->
+  <header class="topbar">
+    <div class="tb-logo">
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+        <circle cx="10" cy="10" r="9" stroke="var(--blu)" stroke-width="1.5"/>
+        <circle cx="10" cy="10" r="4" fill="var(--blu)"/>
+      </svg>
     </div>
+    <div class="tb-info">
+      <div class="tb-title">NIT · Supervisor</div>
+      <div class="tb-status">
+        <div class="tb-live-dot"></div>
+        <span id="live-lbl">Ao vivo</span>
+      </div>
+    </div>
+    <div class="tb-actions">
+      <span class="tb-time" id="clk">--:--</span>
+      <div class="tb-icon-btn" onclick="showToast('Notificações: 3 novas')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="var(--tx2)" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="var(--tx2)" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <span class="tb-badge" id="notif-badge">3</span>
+      </div>
+    </div>
+  </header>
 
-    <script>
-        // --- CONFIGURAÇÃO E DADOS ---
-        // A const D será substituída pelo Firebase Listener no futuro.
-        let D = [
-            {cod:'A14',loc:'AV. BEZERRA DE MENEZES × R. DIAS DA ROCHA',prob:'PISCANTE/APAGADO',pl:'espera',sub:null,ini:'07:32',fim:'',obs:'Controlador sem comunicação. Sem equipe despachada.',eq:'',vt:''},
-            {cod:'B07',loc:'AV. AGUANAMBI × R. VISCONDE DO RIO BRANCO',prob:'PISCANTE',pl:'espera',sub:null,ini:'08:10',fim:'',obs:'Modo piscante amarelo. Aguarda técnico.',eq:'',vt:''},
-            {cod:'C22',loc:'AV. DOMINGOS OLÍMPIO × R. OTOKAR DOLEJSCHI',prob:'APAGADO',pl:'espera',sub:null,ini:'09:15',fim:'',obs:'Falta de energia. Concessionária notificada.',eq:'',vt:''},
-            {cod:'D03',loc:'AV. SANTOS DUMONT × AV. BARÃO DE STUDART',prob:'PISCANTE/APAGADO',pl:'atend',sub:'vl',ini:'06:00',fim:'',obs:'Via livre despachada. Aguardando regularização.',eq:'VL FREITAS',vt:'N/I'},
-            {cod:'E11',loc:'R. MONSENHOR TABOSA × R. JOAQUIM NABUCO',prob:'PISCANTE',pl:'atend',sub:'vl',ini:'05:30',fim:'',obs:'Equipe no local. Aguarda peça de reposição.',eq:'VL MOURA',vt:'N/I'},
-            {cod:'F18',loc:'AV. WASHINGTON SOARES × R. CORONEL JUCÁ',prob:'APAGADO',pl:'atend',sub:'amc',ini:'07:00',fim:'',obs:'Agente AMC controlando o cruzamento.',eq:'AGT LIMA',vt:'VT 12'},
-            {cod:'G09',loc:'AV. CASTELO BRANCO × R. SENA MADUREIRA',prob:'PISCANTE',pl:'atend',sub:'amc',ini:'08:45',fim:'',obs:'AMC em regime de controle manual.',eq:'AGT SOUZA',vt:'VT 08'},
-            {cod:'H01',loc:'AV. 13 DE MAIO × AV. HERÁCLITO GRAÇA',prob:'PISCANTE/APAGADO',pl:'norm',sub:null,ini:'04:00',fim:'10:45',obs:'Normalizado após substituição de módulo.',eq:'VL MATOS',vt:'N/I'},
-            {cod:'I05',loc:'R. DA ASSUNÇÃO × AV. DUQUE DE CAXIAS',prob:'APAGADO',pl:'norm',sub:null,ini:'03:30',fim:'09:20',obs:'Energia restabelecida pela Enel.',eq:'',vt:''},
-        ];
+  <!-- ══ STATS (faixa abaixo do topbar, cor por estado) ════ -->
+  <div class="stats-row" id="stats-row" style="background:var(--s1);border-bottom:1px solid var(--b1);">
+    <div class="stat s-tot" id="stat-tot">
+      <div class="stat-n" style="color:var(--tx1)" id="s-tot">0</div>
+      <div class="stat-l">Total</div>
+    </div>
+    <div class="stat s-esp" id="stat-esp">
+      <div class="stat-n" id="s-esp">0</div>
+      <div class="stat-l">Aguardando</div>
+    </div>
+    <div class="stat s-atd-vl" id="stat-atd">
+      <div class="stat-n" id="s-atd">0</div>
+      <div class="stat-l">Atendendo</div>
+    </div>
+    <div class="stat s-nrm" id="stat-nrm">
+      <div class="stat-n" id="s-nrm">0</div>
+      <div class="stat-l">Normaliz.</div>
+    </div>
+  </div>
 
-        let openPl = { espera: true, atend: true, norm: false };
-        let openSub = { vl: true, amc: true };
-        let expanded = null;
-        let dispatching = null;
+  <!-- ══ BUSCA ═════════════════════════════════════════════ -->
+  <div class="search-bar">
+    <div class="search-inner">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+        <circle cx="11" cy="11" r="8" stroke="var(--tx3)" stroke-width="2"/>
+        <path d="m21 21-4.35-4.35" stroke="var(--tx3)" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <input class="search-input" id="search-input" placeholder="Buscar por código, cruzamento…" oninput="handleSearch(this.value)">
+    </div>
+  </div>
 
-        const PLcfg = {
-            espera: { name: 'Aguardando atendimento', icon: '⏳', ic: '#f85149', ibg: 'rgba(248,81,73,0.13)', cc: 'var(--red)' },
-            atend: { name: 'Em atendimento', icon: '🔧', ic: '#e3b341', ibg: 'rgba(227,179,65,0.13)', cc: 'var(--amb)' },
-            norm: { name: 'Normalizados', icon: '✓', ic: '#3fb950', ibg: 'rgba(63,185,80,0.13)', cc: 'var(--grn)' }
-        };
+  <!-- ══ FILTROS ════════════════════════════════════════════ -->
+  <div class="filter-bar" id="filter-bar">
+    <button class="f-tab active" data-filter="todos" onclick="setFilter('todos',this)">
+      Todos <span class="f-count" id="fc-todos">9</span>
+    </button>
+    <button class="f-tab org-tab" data-filter="espera" onclick="setFilter('espera',this)">
+      Aguardando <span class="f-count" id="fc-espera">3</span>
+    </button>
+    <button class="f-tab" data-filter="vl" onclick="setFilter('vl',this)">
+      Via Livre <span class="f-count" id="fc-vl">2</span>
+    </button>
+    <button class="f-tab" data-filter="amc" onclick="setFilter('amc',this)">
+      AMC <span class="f-count" id="fc-amc">2</span>
+    </button>
+    <button class="f-tab" data-filter="norm" onclick="setFilter('norm',this)">
+      Normalizados <span class="f-count" id="fc-norm">2</span>
+    </button>
+  </div>
 
-        const SUBcfg = {
-            vl: { label: 'Via Livre', tc: '#f0883e', tbg: 'rgba(240,136,62,0.13)', tb: 'rgba(240,136,62,0.32)', dc: 'var(--org)' },
-            amc: { label: 'AMC', tc: '#58a6ff', tbg: 'rgba(88,166,255,0.13)', tb: 'rgba(88,166,255,0.30)', dc: 'var(--blu)' }
-        };
+  <!-- ══ LISTA DE OCORRÊNCIAS ═══════════════════════════════ -->
+  <div class="list-wrap" id="list-wrap">
+    <!-- conteúdo dinâmico -->
+  </div>
 
-        // --- FUNÇÕES DE RENDERIZAÇÃO ---
-        function dotColor(d) {
-            if (d.pl === 'norm') return 'var(--grn)';
-            if (d.sub === 'vl') return 'var(--org)';
-            if (d.sub === 'amc') return 'var(--blu)';
-            return 'var(--red)';
-        }
+  <!-- ══ PAINEL EQUIPES ════════════════════════════════════ -->
+  <div class="tab-panel" id="tab-equipes">
+    <!-- dinâmico -->
+  </div>
 
-        function trackHTML(d) {
-            const dc = dotColor(d);
-            const bl = d.pl === 'espera' ? ' blink' : '';
-            const isExp = expanded === d.cod;
-            const isDsp = dispatching === d.cod;
-            
-            return `
-            <div class="track${isExp ? ' open' : ''}" id="tr-${d.cod}" onclick="toggleCard('${d.cod}')">
-                <span class="tk-code">${d.cod}</span>
-                <div class="tk-dot${bl}" style="background:${dc}"></div>
-                <span class="tk-loc">${d.loc}</span>
-                <span class="tk-time">${d.ini}</span>
-                <span class="tk-chev">›</span>
-            </div>
-            <div class="detail${isExp ? ' show' : ''}" id="dt-${d.cod}">
-                <div class="det-prob">${d.prob}${d.eq ? ' · ' + d.eq : ''}</div>
-                <div class="det-grid">
-                    <div class="det-f"><div class="det-l">Código</div><div class="det-v">${d.cod}</div></div>
-                    <div class="det-f"><div class="det-l">Início</div><div class="det-v">${d.ini || '—'}</div></div>
-                    ${d.fim ? `<div class="det-f"><div class="det-l">Fim</div><div class="det-v">${d.fim}</div></div>` : ''}
-                    ${d.eq ? `<div class="det-f"><div class="det-l">Equipe</div><div class="det-v">${d.eq}</div></div>` : ''}
-                    ${d.vt && d.vt !== 'N/I' ? `<div class="det-f"><div class="det-l">Viatura</div><div class="det-v">${d.vt}</div></div>` : ''}
-                    <div class="det-f full"><div class="det-l">Cruzamento</div><div class="det-v">${d.loc}</div></div>
-                </div>
-                ${d.obs ? `<div class="det-obs">${d.obs}</div>` : ''}
-                <div class="det-acts">
-                    <button class="act act-copy" onclick="copiar(event, '${d.cod}','${d.loc.replace(/'/g, "\\'")}','${d.prob}')">Copiar</button>
-                    <button class="act act-desp" onclick="abrirDespacho(event,'${d.cod}')">Despachar</button>
-                    ${d.pl !== 'norm' ? `<button class="act act-norm" onclick="normalizar(event, '${d.cod}')">Normalizar</button>` : ''}
-                </div>
-            </div>
-            <div class="dispatch-form${isDsp ? ' show' : ''}" id="df-${d.cod}">
-                <div class="df-title">
-                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 8l10-6v5l-6 1 6 1v5z" fill="#58a6ff"/></svg>
-                    Despachar equipe · ${d.cod}
-                </div>
-                <div class="df-row">
-                    <div class="df-field"><div class="df-label">Equipe / Agente</div><input class="df-input" id="df-eq-${d.cod}" placeholder="Ex: VL FREITAS" value="${d.eq || ''}"></div>
-                    <div class="df-field"><div class="df-label">Viatura</div><input class="df-input" id="df-vt-${d.cod}" placeholder="Ex: VT 12" value="${d.vt && d.vt !== 'N/I' ? d.vt : ''}"></div>
-                </div>
-                <div class="df-acts">
-                    <button class="df-btn df-cancel" onclick="fecharDespacho(event)">Cancelar</button>
-                    <button class="df-btn df-confirm" onclick="confirmarDespacho(event,'${d.cod}','${d.sub || ''}')">Confirmar</button>
-                    <button class="df-btn df-wpp" onclick="enviarWpp(event,'${d.cod}','${d.loc.replace(/'/g, "\\'")}','${d.prob}')">WhatsApp</button>
-                </div>
+  <!-- ══ PAINEL NIT ════════════════════════════════════════ -->
+  <div class="tab-panel" id="tab-nit">
+    <div class="nit-row-item">
+      <div class="nit-row-title">Kanban · tab-semaforo</div>
+      <div class="nit-kv"><span class="nit-k">Aguardando</span><span class="nit-v" style="color:var(--org)" id="ni-esp">3</span></div>
+      <div class="nit-kv"><span class="nit-k">Via Livre</span><span class="nit-v" style="color:var(--org)" id="ni-vl">2</span></div>
+      <div class="nit-kv"><span class="nit-k">AMC</span><span class="nit-v" style="color:var(--blu)" id="ni-amc">2</span></div>
+      <div class="nit-kv"><span class="nit-k">Normalizados</span><span class="nit-v" style="color:var(--arc)" id="ni-nrm">2</span></div>
+    </div>
+    <div class="sync-row">
+      <div class="sync-info">
+        <div class="sync-dot" id="sync-dot"></div>
+        <div>
+          <div class="sync-lbl" id="sync-lbl">Sincronia ativa</div>
+          <div class="sync-time">Última: <span id="ni-sync">--:--</span></div>
+        </div>
+      </div>
+      <button class="sync-btn" onclick="triggerSync()">Sincronizar</button>
+    </div>
+    <div class="nit-row-item">
+      <div class="nit-row-title">Versão do sistema</div>
+      <div class="nit-kv"><span class="nit-k">NIT</span><span class="nit-v">v12</span></div>
+      <div class="nit-kv"><span class="nit-k">Painel</span><span class="nit-v">Supervisor</span></div>
+      <div class="nit-kv"><span class="nit-k">Firebase</span><span class="nit-v" style="color:var(--tx3)">Pendente integração</span></div>
+    </div>
+  </div>
+
+  <!-- ══ PAINEL CONFIG ═════════════════════════════════════ -->
+  <div class="tab-panel" id="tab-config">
+    <div class="cfg-section">
+      <div class="cfg-section-title">Perfil</div>
+      <div class="cfg-row">
+        <div class="cfg-icon">👤</div>
+        <div class="cfg-info">
+          <div class="cfg-name">Supervisor</div>
+          <div class="cfg-desc">Nível de acesso: Operacional</div>
+        </div>
+        <span class="cfg-chev">›</span>
+      </div>
+      <div class="cfg-row">
+        <div class="cfg-icon">🔔</div>
+        <div class="cfg-info">
+          <div class="cfg-name">Notificações</div>
+          <div class="cfg-desc">Aguardando atendimento ativado</div>
+        </div>
+        <span class="cfg-chev">›</span>
+      </div>
+    </div>
+    <div class="cfg-section">
+      <div class="cfg-section-title">Integração</div>
+      <div class="cfg-row">
+        <div class="cfg-icon">🔗</div>
+        <div class="cfg-info">
+          <div class="cfg-name">Firebase</div>
+          <div class="cfg-desc">Aguardando credenciais</div>
+        </div>
+        <span class="cfg-chev">›</span>
+      </div>
+      <div class="cfg-row">
+        <div class="cfg-icon">📱</div>
+        <div class="cfg-info">
+          <div class="cfg-name">WhatsApp</div>
+          <div class="cfg-desc">Números de equipe não configurados</div>
+        </div>
+        <span class="cfg-chev">›</span>
+      </div>
+    </div>
+    <div class="cfg-section">
+      <div class="cfg-section-title">Sobre</div>
+      <div class="cfg-row">
+        <div class="cfg-icon">ℹ️</div>
+        <div class="cfg-info">
+          <div class="cfg-name">NIT v12 · Supervisor</div>
+          <div class="cfg-desc">Núcleo de Inteligência de Tráfego</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ NAV INFERIOR ══════════════════════════════════════ -->
+  <nav class="nav">
+    <div class="nav-item active" id="nav-ocorr" onclick="setTab('ocorr')">
+      <span class="nav-icon">⚠</span>
+      <span class="nav-lbl">Ocorrências</span>
+      <span class="nav-badge" id="nav-badge-esp">3</span>
+    </div>
+    <div class="nav-item" id="nav-equipes" onclick="setTab('equipes')">
+      <span class="nav-icon">👥</span>
+      <span class="nav-lbl">Equipes</span>
+    </div>
+    <div class="nav-item" id="nav-nit" onclick="setTab('nit')">
+      <span class="nav-icon">⬡</span>
+      <span class="nav-lbl">NIT</span>
+    </div>
+    <div class="nav-item" id="nav-config" onclick="setTab('config')">
+      <span class="nav-icon">⚙</span>
+      <span class="nav-lbl">Config</span>
+    </div>
+  </nav>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ──────────────────────────────────────────────────────────
+   DADOS
+   TODO: substituir por Firebase onValue listener
+────────────────────────────────────────────────────────── */
+let D = [
+  {cod:'A14',loc:'AV. BEZERRA DE MENEZES × R. DIAS DA ROCHA',   prob:'PISCANTE/APAGADO', pl:'espera',sub:null, ini:'07:32',fim:'',    obs:'Controlador sem comunicação. Sem equipe despachada.',   eq:'',          vt:'',     novo:true},
+  {cod:'B07',loc:'AV. AGUANAMBI × R. VISCONDE DO RIO BRANCO',   prob:'PISCANTE',         pl:'espera',sub:null, ini:'08:10',fim:'',    obs:'Modo piscante amarelo. Aguarda técnico.',               eq:'',          vt:'',     novo:true},
+  {cod:'C22',loc:'AV. DOMINGOS OLÍMPIO × R. OTOKAR DOLEJSCHI',  prob:'APAGADO',          pl:'espera',sub:null, ini:'09:15',fim:'',    obs:'Falta de energia. Concessionária notificada.',          eq:'',          vt:'',     novo:true},
+  {cod:'D03',loc:'AV. SANTOS DUMONT × AV. BARÃO DE STUDART',    prob:'PISCANTE/APAGADO', pl:'atend', sub:'vl', ini:'06:00',fim:'',    obs:'Via livre despachada. Aguardando regularização.',       eq:'VL FREITAS',vt:'VT 03',novo:false},
+  {cod:'E11',loc:'R. MONSENHOR TABOSA × R. JOAQUIM NABUCO',     prob:'PISCANTE',         pl:'atend', sub:'vl', ini:'05:30',fim:'',    obs:'Equipe no local. Aguarda peça de reposição.',           eq:'VL MOURA',  vt:'VT 07',novo:false},
+  {cod:'F18',loc:'AV. WASHINGTON SOARES × R. CORONEL JUCÁ',     prob:'APAGADO',          pl:'atend', sub:'amc',ini:'07:00',fim:'',    obs:'Agente AMC controlando o cruzamento.',                 eq:'AGT LIMA',  vt:'VT 12',novo:false},
+  {cod:'G09',loc:'AV. CASTELO BRANCO × R. SENA MADUREIRA',      prob:'PISCANTE',         pl:'atend', sub:'amc',ini:'08:45',fim:'',    obs:'AMC em regime de controle manual.',                    eq:'AGT SOUZA', vt:'VT 08',novo:false},
+  {cod:'H01',loc:'AV. 13 DE MAIO × AV. HERÁCLITO GRAÇA',        prob:'PISCANTE/APAGADO', pl:'norm',  sub:null, ini:'04:00',fim:'10:45',obs:'Normalizado após substituição de módulo.',               eq:'VL MATOS',  vt:'VT 05',novo:false},
+  {cod:'I05',loc:'R. DA ASSUNÇÃO × AV. DUQUE DE CAXIAS',        prob:'APAGADO',          pl:'norm',  sub:null, ini:'03:30',fim:'09:20',obs:'Energia restabelecida pela Enel.',                     eq:'',          vt:'',     novo:false},
+];
+
+/* ── UI STATE ── */
+let expanded    = null;
+let dispatching = null;
+let activeTab   = 'ocorr';
+let activeFilter = 'todos';
+let searchQ     = '';
+let dispSub     = {}; /* sub selecionado por cod no form de despacho */
+
+/* ──────────────────────────────────────────────────────────
+   AVATAR — lógica de identificador visual
+────────────────────────────────────────────────────────── */
+function avatarFor(d) {
+  if (d.pl === 'norm') {
+    /* arquivado/normalizado: mostra hora de normalização */
+    return { cls:'arc', l1:'NRM', l2: d.fim || '—' };
+  }
+  if (d.pl === 'espera') {
+    /* sem equipe: código piscante */
+    return { cls:'esp', l1:'ESP', l2: d.cod };
+  }
+  /* em atendimento — mostra número da viatura ou sigla da equipe */
+  if (d.sub === 'vl') {
+    const vt = d.vt && d.vt !== 'N/I' ? d.vt.replace('VT ','VT·') : (d.eq ? d.eq.split(' ')[0] : 'VL');
+    return { cls:'vl', l1: vt, l2: 'VL' };
+  }
+  if (d.sub === 'amc') {
+    const vt = d.vt && d.vt !== 'N/I' ? d.vt.replace('VT ','VT·') : (d.eq ? d.eq.split(' ')[0] : 'AMC');
+    return { cls:'amc', l1: vt, l2: 'AMC' };
+  }
+  return { cls:'esp', l1:'—', l2:'' };
+}
+
+/* ──────────────────────────────────────────────────────────
+   TAG de estado — texto + classe
+────────────────────────────────────────────────────────── */
+function tagFor(d) {
+  if (d.pl === 'norm')         return { cls:'tag-arc', txt:'Normalizado' };
+  if (d.pl === 'espera')       return { cls:'tag-esp', txt:'Aguardando' };
+  if (d.sub === 'vl')          return { cls:'tag-vl',  txt:'Via Livre' };
+  if (d.sub === 'amc')         return { cls:'tag-amc', txt:'AMC' };
+  return { cls:'tag-esp', txt:'?' };
+}
+
+/* ──────────────────────────────────────────────────────────
+   FILTRAGEM
+────────────────────────────────────────────────────────── */
+function filteredD() {
+  let list = D;
+  /* filtro de texto */
+  if (searchQ) {
+    const q = searchQ.toLowerCase();
+    list = list.filter(d =>
+      d.cod.toLowerCase().includes(q) ||
+      d.loc.toLowerCase().includes(q) ||
+      d.prob.toLowerCase().includes(q) ||
+      (d.eq  || '').toLowerCase().includes(q) ||
+      (d.vt  || '').toLowerCase().includes(q)
+    );
+  }
+  /* filtro de aba */
+  if (activeFilter === 'espera') list = list.filter(d => d.pl === 'espera');
+  else if (activeFilter === 'vl')   list = list.filter(d => d.sub === 'vl');
+  else if (activeFilter === 'amc')  list = list.filter(d => d.sub === 'amc');
+  else if (activeFilter === 'norm') list = list.filter(d => d.pl === 'norm');
+  /* ordenação: espera primeiro, depois atend, depois norm */
+  const ord = { espera:0, atend:1, norm:2 };
+  list = [...list].sort((a,b) => (ord[a.pl]??9)-(ord[b.pl]??9));
+  return list;
+}
+
+/* ──────────────────────────────────────────────────────────
+   HTML DO ITEM DE LISTA
+────────────────────────────────────────────────────────── */
+function itemHTML(d) {
+  const av   = avatarFor(d);
+  const tag  = tagFor(d);
+  const isExp = expanded    === d.cod;
+  const isDsp = dispatching === d.cod;
+  const locEsc = d.loc.replace(/'/g,"\\'");
+
+  /* horário de exibição: em atendimento mostra duração implícita via hora início */
+  const timeDisplay = d.pl === 'norm' ? (d.fim ? `Arq. ${d.fim}` : d.ini) : d.ini;
+
+  /* metadado secundário: equipe se disponível, senão tipo de problema */
+  const metaText = d.eq ? d.eq + (d.vt && d.vt!=='N/I' ? ` · ${d.vt}` : '') : d.prob;
+
+  return `
+<div class="item${isExp?' open':''}" id="tr-${d.cod}" onclick="toggleItem('${d.cod}')">
+  ${d.novo ? `<div class="item-badge"></div>` : ''}
+  <div class="av ${av.cls}">
+    <span class="av-line1">${av.l1}</span>
+    <span class="av-line2">${av.l2}</span>
+  </div>
+  <div class="item-body">
+    <div class="item-row1">
+      <span class="item-cod">${d.cod}</span>
+      <span class="item-time">${timeDisplay}</span>
+    </div>
+    <div class="item-loc">${d.loc}</div>
+    <div class="item-meta">
+      <span class="item-prob">${metaText}</span>
+      <span class="item-tag ${tag.cls}">${tag.txt}</span>
+    </div>
+  </div>
+</div>
+
+<div class="detail-panel${isExp?' show':''}" id="dt-${d.cod}">
+  <div class="dp-inner">
+    <div class="dp-head">
+      <span class="dp-prob">${d.prob}</span>
+      <div class="dp-close" onclick="fecharItem(event,'${d.cod}')">✕</div>
+    </div>
+    <div class="dp-grid">
+      <div class="dp-f"><div class="dp-l">Código</div><div class="dp-v">${d.cod}</div></div>
+      <div class="dp-f"><div class="dp-l">Início</div><div class="dp-v">${d.ini||'—'}</div></div>
+      ${d.fim?`<div class="dp-f"><div class="dp-l">Normalizado em</div><div class="dp-v">${d.fim}</div></div>`:''}
+      ${d.eq ?`<div class="dp-f"><div class="dp-l">Equipe</div><div class="dp-v">${d.eq}</div></div>`:''}
+      ${d.vt && d.vt!=='N/I'?`<div class="dp-f"><div class="dp-l">Viatura</div><div class="dp-v">${d.vt}</div></div>`:''}
+      <div class="dp-f full"><div class="dp-l">Cruzamento</div><div class="dp-v">${d.loc}</div></div>
+    </div>
+    ${d.obs?`<div class="dp-obs">${d.obs}</div>`:''}
+    <div class="dp-acts">
+      <button class="dp-btn btn-copy" onclick="copiar(event,'${d.cod}','${locEsc}','${d.prob}')">Copiar</button>
+      ${d.pl!=='norm'
+        ? `<button class="dp-btn btn-desp" onclick="abrirDespacho(event,'${d.cod}')">Despachar</button>
+           <button class="dp-btn btn-norm" onclick="normalizar(event,'${d.cod}')">Normalizar</button>`
+        : `<button class="dp-btn btn-reab" onclick="reativar(event,'${d.cod}')">Reativar</button>`
+      }
+    </div>
+  </div>
+</div>
+
+<div class="dispatch-panel${isDsp?' show':''}" id="df-${d.cod}">
+  <div class="dsp-inner">
+    <div class="dsp-title">
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+        <path d="M2 8l10-6v5l-6 1 6 1v5z" fill="var(--blu)"/>
+      </svg>
+      Despachar · ${d.cod}
+    </div>
+    <div class="dsp-grid">
+      <div class="dsp-field">
+        <div class="dsp-label">Equipe / Agente</div>
+        <input class="dsp-input" id="df-eq-${d.cod}" placeholder="VL FREITAS" value="${d.eq||''}">
+      </div>
+      <div class="dsp-field">
+        <div class="dsp-label">Viatura</div>
+        <input class="dsp-input" id="df-vt-${d.cod}" placeholder="VT 12" value="${d.vt&&d.vt!=='N/I'?d.vt:''}">
+      </div>
+    </div>
+    <div class="dsp-sub-row">
+      <div class="dsp-sub-label">Tipo de recurso</div>
+      <div class="dsp-sub-opts">
+        <button class="dsp-sub-opt${(dispSub[d.cod]||'vl')==='vl'?' sel-vl':''}"
+          onclick="selSub(event,'${d.cod}','vl')">Via Livre</button>
+        <button class="dsp-sub-opt${(dispSub[d.cod]||'vl')==='amc'?' sel-amc':''}"
+          onclick="selSub(event,'${d.cod}','amc')">AMC</button>
+      </div>
+    </div>
+    <div class="dsp-acts">
+      <button class="dsp-btn dsp-cancel"  onclick="fecharDespacho(event)">Cancelar</button>
+      <button class="dsp-btn dsp-confirm" onclick="confirmarDespacho(event,'${d.cod}')">Confirmar</button>
+      <button class="dsp-btn dsp-wpp"     onclick="enviarWpp(event,'${d.cod}','${locEsc}','${d.prob}')">WhatsApp</button>
+    </div>
+  </div>
+</div>`;
+}
+
+/* ──────────────────────────────────────────────────────────
+   RENDER
+────────────────────────────────────────────────────────── */
+/* helper: atualiza um stat com bump animado se valor mudou */
+const _prev = {};
+function setStat(id, val, color) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (_prev[id] !== val) {
+    el.textContent = val;
+    el.classList.remove('bump');
+    void el.offsetWidth; /* reflow para reanimar */
+    el.classList.add('bump');
+    _prev[id] = val;
+  }
+  el.style.color = val > 0 ? color : 'var(--tx3)';
+  el.closest('.stat')?.classList.toggle('dim', val === 0);
+}
+
+function renderList() {
+  const list  = filteredD();
+  const esp   = D.filter(d=>d.pl==='espera');
+  const atd   = D.filter(d=>d.pl==='atend');
+  const nrm   = D.filter(d=>d.pl==='norm');
+  const vlCt  = D.filter(d=>d.sub==='vl').length;
+  const amcCt = D.filter(d=>d.sub==='amc').length;
+  const novos = D.filter(d=>d.novo).length;
+
+  /* stats coloridos por estado */
+  setStat('s-tot', D.length,   'var(--tx1)');
+  setStat('s-esp', esp.length, 'var(--org)');
+  setStat('s-atd', atd.length, atd.length > 0 ? 'var(--blu)' : 'var(--tx3)');
+  setStat('s-nrm', nrm.length, 'var(--arc)');
+
+  /* contadores filtros */
+  document.getElementById('fc-todos').textContent  = D.length;
+  document.getElementById('fc-espera').textContent = esp.length;
+  document.getElementById('fc-vl').textContent     = vlCt;
+  document.getElementById('fc-amc').textContent    = amcCt;
+  document.getElementById('fc-norm').textContent   = nrm.length;
+
+  /* badge nav */
+  const nb = document.getElementById('nav-badge-esp');
+  nb.textContent = esp.length;
+  nb.style.display = esp.length ? 'flex' : 'none';
+
+  /* badge topbar */
+  document.getElementById('notif-badge').textContent = novos || '0';
+
+  /* NIT counters */
+  document.getElementById('ni-esp').textContent  = esp.length;
+  document.getElementById('ni-vl').textContent   = vlCt;
+  document.getElementById('ni-amc').textContent  = amcCt;
+  document.getElementById('ni-nrm').textContent  = nrm.length;
+
+  /* lista vazia */
+  if (!list.length) {
+    document.getElementById('list-wrap').innerHTML =
+      `<div style="padding:48px 24px;text-align:center;color:var(--tx3);font-size:13px">
+        Nenhuma ocorrência encontrada
+       </div>`;
+    return;
+  }
+
+  /* agrupamento com separadores */
+  let h = '';
+  let lastGroup = null;
+  list.forEach(d => {
+    const group = d.pl === 'norm'   ? 'norm' :
+                  d.pl === 'espera' ? 'espera' : 'atend';
+    if (group !== lastGroup) {
+      const labels = {
+        espera: 'Aguardando atendimento',
+        atend:  'Em atendimento',
+        norm:   'Normalizados'
+      };
+      const colors = { espera:'var(--org)', atend:'var(--blu)', norm:'var(--arc)' };
+      h += `<div class="date-divider">
+              <span style="color:${colors[group]};border-color:${colors[group]}33">${labels[group]}</span>
             </div>`;
-        }
+      lastGroup = group;
+    }
+    h += itemHTML(d);
+  });
+  document.getElementById('list-wrap').innerHTML = h;
 
-        function subHTML(sk) {
-            const s = SUBcfg[sk];
-            const items = D.filter(d => d.pl === 'atend' && d.sub === sk);
-            if (!items.length) return '';
-            const isOpen = openSub[sk];
-            return `
-            <div class="sub${isOpen ? ' open' : ''}" id="sub-${sk}">
-                <div class="sub-head" onclick="toggleSub('${sk}')">
-                    <span class="sub-tag" style="background:${s.tbg};color:${s.tc};border:1px solid ${s.tb}">${s.label}</span>
-                    <span class="sub-label" style="color:${s.tc}">${items.length} ocorrência${items.length !== 1 ? 's' : ''}</span>
-                    <span class="sub-chev">›</span>
-                </div>
-                <div class="sub-items">${items.map(trackHTML).join('')}</div>
-            </div>`;
-        }
+  /* aplica animação de entrada nos itens novos */
+  document.querySelectorAll('.item').forEach(el => {
+    const cod = el.id.replace('tr-','');
+    const d   = D.find(x=>x.cod===cod);
+    if (d?.novo) el.classList.add('novo-anim');
+  });
+}
 
-        function render() {
-            const esp = D.filter(d => d.pl === 'espera');
-            const atd = D.filter(d => d.pl === 'atend');
-            const nrm = D.filter(d => d.pl === 'norm');
+function renderEquipes() {
+  const equipes = [
+    { id:'VL FREITAS', vt:'VT 03', sub:'vl',  status:'Em campo', cod:'D03' },
+    { id:'VL MOURA',   vt:'VT 07', sub:'vl',  status:'Em campo', cod:'E11' },
+    { id:'AGT LIMA',   vt:'VT 12', sub:'amc', status:'Em campo', cod:'F18' },
+    { id:'AGT SOUZA',  vt:'VT 08', sub:'amc', status:'Em campo', cod:'G09' },
+    { id:'VL MATOS',   vt:'VT 05', sub:'vl',  status:'Livre',    cod:''    },
+  ];
+  let h = '';
+  equipes.forEach(eq => {
+    const isAtend = !!eq.cod;
+    const avCls   = eq.sub==='amc' ? 'blu' : isAtend ? 'org' : 'arc';
+    const tagCls  = eq.sub==='amc' ? 'tag-amc' : isAtend ? 'tag-vl' : 'tag-arc';
+    const tagTxt  = eq.sub==='amc' ? 'AMC' : isAtend ? 'Via Livre' : 'Livre';
+    const ocorr   = eq.cod ? D.find(d=>d.cod===eq.cod) : null;
+    h += `
+<div class="team-card">
+  <div class="team-head">
+    <div class="team-av ${avCls}">${eq.vt.replace('VT ','VT·')}</div>
+    <div class="team-info">
+      <div class="team-name">${eq.id}</div>
+      <div class="team-sub">${eq.vt}${ocorr?' · '+ocorr.cod+' '+ocorr.loc.split('×')[0].trim():' · Sem ocorrência'}</div>
+    </div>
+    <span class="team-status item-tag ${tagCls}">${tagTxt}</span>
+  </div>
+</div>`;
+  });
+  document.getElementById('tab-equipes').innerHTML = h;
+}
 
-            document.getElementById('s-tot').textContent = D.length;
-            document.getElementById('s-esp').textContent = esp.length;
-            document.getElementById('s-atd').textContent = atd.length;
-            document.getElementById('s-nrm').textContent = nrm.length;
+function render() {
+  renderList();
+  renderEquipes();
+}
 
-            document.getElementById('ni-esp').textContent = esp.length;
-            document.getElementById('ni-vl').textContent = D.filter(d => d.sub === 'vl').length;
-            document.getElementById('ni-amc').textContent = D.filter(d => d.sub === 'amc').length;
-            document.getElementById('ni-nrm').textContent = nrm.length;
+/* ──────────────────────────────────────────────────────────
+   NAVEGAÇÃO DE ABAS
+────────────────────────────────────────────────────────── */
+function setTab(tab) {
+  activeTab = tab;
+  /* list-wrap e tab-panels */
+  const lw = document.getElementById('list-wrap');
+  lw.style.display = tab === 'ocorr' ? 'block' : 'none';
+  ['equipes','nit','config'].forEach(t => {
+    const el = document.getElementById('tab-'+t);
+    el.classList.toggle('active', t === tab);
+  });
+  /* nav active */
+  ['ocorr','equipes','nit','config'].forEach(t => {
+    document.getElementById('nav-'+t).classList.toggle('active', t===tab);
+  });
+  /* search + filter-bar visíveis só na aba de ocorrências */
+  document.querySelector('.search-bar').style.display  = tab==='ocorr' ? '' : 'none';
+  document.querySelector('.filter-bar').style.display  = tab==='ocorr' ? '' : 'none';
+}
 
-            let h = '';
-            [['espera', esp], ['atend', atd], ['norm', nrm]].forEach(([pk, items]) => {
-                const cfg = PLcfg[pk];
-                const isOpen = openPl[pk];
-                const subLabel = pk === 'atend' ? ' · VL & AMC' : '';
-                
-                h += `
-                <div class="pl${isOpen ? ' open' : ''}" id="pl-${pk}">
-                    <div class="pl-head" onclick="togglePl('${pk}')">
-                        <div class="pl-icon" style="background:${cfg.ibg};color:${cfg.ic}">${cfg.icon}</div>
-                        <div class="pl-info">
-                            <div class="pl-name">${cfg.name}</div>
-                            <div class="pl-desc">${items.length} ocorrência${items.length !== 1 ? 's' : ''}${subLabel}</div>
-                        </div>
-                        <span class="pl-ct" style="color:${cfg.cc}">${items.length}</span>
-                        <span class="pl-chev">›</span>
-                    </div>
-                    <div class="pl-body">`;
-                
-                if (pk === 'atend') {
-                    h += subHTML('vl');
-                    if (D.filter(d => d.pl === 'atend' && d.sub === 'vl').length && D.filter(d => d.pl === 'atend' && d.sub === 'amc').length) {
-                        h += '<div class="sub-rule"></div>';
-                    }
-                    h += subHTML('amc');
-                } else {
-                    h += items.map(trackHTML).join('');
-                }
-                h += '</div></div>';
-            });
-            document.getElementById('pls').innerHTML = h;
-        }
+function setFilter(f, btn) {
+  activeFilter = f;
+  document.querySelectorAll('.f-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  expanded = null; dispatching = null;
+  renderList();
+}
 
-        // --- AÇÕES DO USUÁRIO ---
-        function togglePl(pk) { openPl[pk] = !openPl[pk]; render(); }
-        function toggleSub(sk) { openSub[sk] = !openSub[sk]; render(); }
-        
-        function toggleCard(cod) {
-            if (dispatching === cod) return;
-            expanded = expanded === cod ? null : cod;
-            dispatching = null;
-            render();
-        }
+function handleSearch(val) {
+  searchQ  = val;
+  expanded = null; dispatching = null;
+  renderList();
+}
 
-        function abrirDespacho(e, cod) {
-            e.stopPropagation();
-            dispatching = cod;
-            expanded = cod;
-            render();
-        }
+/* ──────────────────────────────────────────────────────────
+   AÇÕES NOS ITENS
+────────────────────────────────────────────────────────── */
+function toggleItem(cod) {
+  if (dispatching === cod) return;
+  const idx = D.findIndex(d=>d.cod===cod);
+  if (idx>=0) D[idx].novo = false;
 
-        function fecharDespacho(e) {
-            e.stopPropagation();
-            dispatching = null;
-            render();
-        }
+  const wasOpen = expanded === cod;
+  expanded    = wasOpen ? null : cod;
+  dispatching = null;
+  render();
 
-        function confirmarDespacho(e, cod, sub) {
-            e.stopPropagation();
-            const idx = D.findIndex(d => d.cod === cod);
-            if (idx < 0) return;
-            
-            const eq = document.getElementById('df-eq-' + cod)?.value.trim() || '';
-            const vt = document.getElementById('df-vt-' + cod)?.value.trim() || 'N/I';
-            
-            D[idx].eq = eq;
-            D[idx].vt = vt;
-            if (D[idx].pl === 'espera') {
-                D[idx].pl = 'atend';
-                D[idx].sub = sub || 'vl';
-            }
-            dispatching = null;
-            expanded = cod;
-            render();
-            triggerSyncFeedback();
-        }
+  /* scroll suave para o item expandido após render */
+  if (!wasOpen) {
+    requestAnimationFrame(() => {
+      const el = document.getElementById('tr-'+cod);
+      if (el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+    });
+  }
+}
 
-        function enviarWpp(e, cod, loc, prob) {
-            e.stopPropagation();
-            const idx = D.findIndex(d => d.cod === cod);
-            const d = idx >= 0 ? D[idx] : {};
-            const eq = document.getElementById('df-eq-' + cod)?.value.trim() || d.eq || '—';
-            const vt = document.getElementById('df-vt-' + cod)?.value.trim() || d.vt || '—';
-            
-            // Refinamento do WhatsApp: No futuro, buscar número do Firebase.
-            const msg = `*DESPACHO SEMAFÓRICO*\n\n*Código:* ${cod}\n*Cruzamento:* ${loc}\n*Ocorrência:* ${prob}\n*Equipe:* ${eq}\n*Viatura:* ${vt}\n*Horário:* ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
-            
-            const encodedMsg = encodeURIComponent(msg);
-            // Simulação: abrir link do WhatsApp. Em produção, usar o número real da equipe.
-            window.open(`https://wa.me/?text=${encodedMsg}`, '_blank');
-        }
+function fecharItem(e, cod) {
+  e.stopPropagation();
+  expanded = null;
+  renderList();
+}
 
-        function copiar(e, cod, loc, prob) {
-            e.stopPropagation();
-            const t = `${cod} 🚦 ${loc} ● ${prob}`;
-            navigator.clipboard.writeText(t).then(() => {
-                const btn = e.target;
-                const originalText = btn.textContent;
-                btn.textContent = 'Copiado!';
-                setTimeout(() => btn.textContent = originalText, 2000);
-            });
-        }
+function abrirDespacho(e, cod) {
+  e.stopPropagation();
+  dispatching = cod;
+  expanded    = cod;
+  if (!dispSub[cod]) dispSub[cod] = 'vl';
+  render();
+}
 
-        function normalizar(e, cod) {
-            e.stopPropagation();
-            const idx = D.findIndex(d => d.cod === cod);
-            if (idx < 0) return;
-            const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-            D[idx].pl = 'norm';
-            D[idx].sub = null;
-            D[idx].fim = now;
-            expanded = null;
-            dispatching = null;
-            render();
-            triggerSyncFeedback();
-        }
+function fecharDespacho(e) {
+  e.stopPropagation();
+  dispatching = null;
+  renderList();
+}
 
-        // --- SINCRONIZAÇÃO E FEEDBACK ---
-        function triggerSyncFeedback() {
-            const dot = document.getElementById('sync-dot');
-            dot.classList.add('syncing');
-            setTimeout(() => {
-                dot.classList.remove('syncing');
-                simSync();
-            }, 1500);
-        }
+function selSub(e, cod, sub) {
+  e.stopPropagation();
+  dispSub[cod] = sub;
+  renderList();
+}
 
-        function simSync() {
-            const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-            document.getElementById('ni-sync').textContent = now;
-        }
+function confirmarDespacho(e, cod) {
+  e.stopPropagation();
+  const idx = D.findIndex(d=>d.cod===cod);
+  if (idx<0) return;
+  const eq  = document.getElementById('df-eq-'+cod)?.value.trim() || '';
+  const vt  = document.getElementById('df-vt-'+cod)?.value.trim() || 'N/I';
+  const sub = dispSub[cod] || 'vl';
+  D[idx].eq  = eq;
+  D[idx].vt  = vt;
+  D[idx].pl  = 'atend';
+  D[idx].sub = sub;
+  D[idx].novo = false;
+  dispatching = null;
+  expanded    = cod;
+  render();
+  triggerSync();
+  showToast(`${cod} despachado → ${eq||sub.toUpperCase()}`);
+}
 
-        function updateClock() {
-            const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-            document.getElementById('clk').textContent = now;
-        }
+function normalizar(e, cod) {
+  e.stopPropagation();
+  const idx = D.findIndex(d=>d.cod===cod);
+  if (idx<0) return;
+  const agora = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  D[idx].pl   = 'norm';
+  D[idx].sub  = null;
+  D[idx].fim  = agora;
+  D[idx].novo = false;
+  expanded = null; dispatching = null;
+  render();
+  triggerSync();
+  showToast(`${cod} normalizado às ${agora}`);
+}
 
-        // --- INICIALIZAÇÃO ---
-        setInterval(updateClock, 1000);
-        updateClock();
-        simSync();
-        render();
-    </script>
+function reativar(e, cod) {
+  e.stopPropagation();
+  const idx = D.findIndex(d=>d.cod===cod);
+  if (idx<0) return;
+  D[idx].pl  = 'espera';
+  D[idx].sub = null;
+  D[idx].fim = '';
+  D[idx].novo = true;
+  expanded = null;
+  render();
+  showToast(`${cod} reativado`);
+}
+
+function enviarWpp(e, cod, loc, prob) {
+  e.stopPropagation();
+  const idx  = D.findIndex(d=>d.cod===cod);
+  const d    = idx>=0 ? D[idx] : {};
+  const eq   = document.getElementById('df-eq-'+cod)?.value.trim() || d.eq||'—';
+  const vt   = document.getElementById('df-vt-'+cod)?.value.trim() || d.vt||'—';
+  const hora = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  const msg  = `*DESPACHO SEMAFÓRICO*\n\n*Código:* ${cod}\n*Cruzamento:* ${loc}\n*Ocorrência:* ${prob}\n*Equipe:* ${eq}\n*Viatura:* ${vt}\n*Horário:* ${hora}`;
+  /* TODO: d.telefone do Firebase → wa.me/55${d.telefone}?text=… */
+  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,'_blank');
+}
+
+function copiar(e, cod, loc, prob) {
+  e.stopPropagation();
+  navigator.clipboard?.writeText(`${cod} 🚦 ${loc} ● ${prob}`)
+    .then(()=>showToast('Local copiado'));
+}
+
+/* ──────────────────────────────────────────────────────────
+   SINCRONIA
+────────────────────────────────────────────────────────── */
+function triggerSync() {
+  const dot = document.getElementById('sync-dot');
+  const lbl = document.getElementById('sync-lbl');
+  dot.classList.add('syncing');
+  lbl.textContent = 'Sincronizando…';
+  setTimeout(() => {
+    dot.classList.remove('syncing');
+    lbl.textContent = 'Sincronia ativa';
+    const agora = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('ni-sync').textContent = agora;
+  }, 1800);
+}
+
+/* ──────────────────────────────────────────────────────────
+   TOAST
+────────────────────────────────────────────────────────── */
+let toastT = null;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastT);
+  toastT = setTimeout(()=>el.classList.remove('show'), 2600);
+}
+
+/* ──────────────────────────────────────────────────────────
+   RELÓGIO
+────────────────────────────────────────────────────────── */
+function updateClock() {
+  document.getElementById('clk').textContent =
+    new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+}
+
+/* ──────────────────────────────────────────────────────────
+   INIT
+────────────────────────────────────────────────────────── */
+setInterval(updateClock, 1000);
+updateClock();
+triggerSync();
+render();
+</script>
 </body>
 </html>
