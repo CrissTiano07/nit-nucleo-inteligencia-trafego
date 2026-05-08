@@ -1482,6 +1482,19 @@
 }
 
 
+// =============================================================================
+//  MÓDULO SEMÁFORO — v10.1
+//  CORREÇÃO: Lógica de cores do relatório agora considera TODAS as colunas ativas.
+//
+//  REGRA DE CORES:
+//    totalAtivos = Aguardando + Sem Necessidade + Via Livre + AMC
+//    (Normalizados/gaveta são EXCLUÍDOS — não são ocorrências ativas)
+//
+//    totalAtivos === 0        → 🟢 Verde  ✅
+//    totalAtivos >= 1 && <= 10 → 🟡 Amarelo ⚠️
+//    totalAtivos > 10         → 🔴 Vermelho 🚨
+// =============================================================================
+
 const Semaforo = {
     ultimoLoteNormalizado: [],
     inicializar() {
@@ -1489,57 +1502,42 @@ const Semaforo = {
         DOM.btnProcessar.addEventListener('click', this.handleProcessarClick.bind(this));
         this.inicializarBuscaPorColuna();
         if (DOM.countNormalizadosGaveta) {
-    DOM.countNormalizadosGaveta.addEventListener('click', (e) => {
-    e.stopPropagation();
-    this.destacarUltimosNormalizados();
-    DOM.countNormalizadosGaveta.classList.remove('tem-novos');
+            DOM.countNormalizadosGaveta.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.destacarUltimosNormalizados();
+                DOM.countNormalizadosGaveta.classList.remove('tem-novos');
+            });
+        }
 
-    });
-}
-
-
-        
         DOM.btnEdicaoSalvar.addEventListener('click', this.handleSalvarEdicaoClick.bind(this));
         DOM.btnDespachoSemaforoConfirmar.addEventListener('click', this.handleSalvarDespachoClick.bind(this));
         DOM.btnVisualizarRelatorio.addEventListener('click', this.handleVisualizarRelatorioClick.bind(this));
         DOM.checkIncluirNormalizados.addEventListener('change', this.handleConfigChange.bind(this));
         DOM.btnModalCopiar.addEventListener('click', this.handleCopiarModalClick.bind(this));
 
-        
-        
         const btnAbrirGaveta = document.getElementById('btn-abrir-gaveta');
         if (btnAbrirGaveta) {
-            btnAbrirGaveta.addEventListener('click', (e) => { 
-                e.stopPropagation(); 
-                this.toggleGaveta(true); 
+            btnAbrirGaveta.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleGaveta(true);
             });
         }
 
-       
-
-        
-
         this.inicializarBuscaPorColuna();
-        
 
         DOM.btnToggleArquivados.addEventListener('click', (e) => { e.stopPropagation(); this.toggleGaveta(false); });
-        
-        document.addEventListener('click', (e) => { 
+
+        document.addEventListener('click', (e) => {
             const btnAbrirGaveta = document.getElementById('btn-abrir-gaveta');
             if (DOM.gavetaArquivados.classList.contains('open') && !DOM.gavetaArquivados.contains(e.target) && !DOM.btnToggleArquivados.contains(e.target) && (!btnAbrirGaveta || !btnAbrirGaveta.contains(e.target))) {
                 this.toggleGaveta(false);
-            } 
-            
+            }
         });
-
-        
-        
 
         const btnToggleSearch = document.getElementById('btn-toggle-search');
         const searchInput = document.getElementById('search-normalizados');
         const gavetaHeader = document.getElementById('gaveta-header');
-        
-        // Adicione uma verificação para evitar erros se os elementos não existirem
+
         if (btnToggleSearch && searchInput && gavetaHeader) {
             const headerContent = gavetaHeader.querySelector('.header-content');
             const searchContainer = gavetaHeader.querySelector('.search-container');
@@ -1582,133 +1580,115 @@ const Semaforo = {
         kanbanArea.addEventListener('click', this.handleKanbanBoardClick.bind(this));
     },
 
-    // FUNÇÃO handleProcessarClick:
-handleProcessarClick() {
-    this.ultimoLoteNormalizado = [];
-    const textoBruto = DOM.relatorioBrutoInput.value;
-    if (!textoBruto.trim()) {
-        showToast('Insira o relatório bruto para processar.', 'warning');
-        return;
-    }
-
-    // --- LÓGICA DE DETECÇÃO DE MODO ---
-    const painelJaPreenchido = document.querySelector('#tab-semaforo .kanban-card') !== null;
-
-    // --- COLETA E PROCESSAMENTO DE EVENTOS (COMUM A AMBOS OS MODOS) ---
-    const linhas = textoBruto.split('\n');
-    const todosOsEventos = [];
-    let eventoAtual = null;
-    let secaoAtual = 'PENDENTE';
-
-    for (const linha of linhas) {
-        if (/NORMALIZADOS✅/.test(linha)) { secaoAtual = 'NORMALIZADO'; continue; }
-        if (/PENDENTES❌/.test(linha)) { secaoAtual = 'PENDENTE'; continue; }
-
-        const dadosDaLinha = this.extrairDadosDaLinha(linha);
-        if (dadosDaLinha) {
-            if (eventoAtual) todosOsEventos.push(eventoAtual);
-            eventoAtual = { ...dadosDaLinha, secao: secaoAtual };
-        } else if (eventoAtual && linha.trim()) {
-            eventoAtual.observacoes = (eventoAtual.observacoes ? eventoAtual.observacoes + ' ' : '') + linha.trim().replace(/"/g, '');
+    handleProcessarClick() {
+        this.ultimoLoteNormalizado = [];
+        const textoBruto = DOM.relatorioBrutoInput.value;
+        if (!textoBruto.trim()) {
+            showToast('Insira o relatório bruto para processar.', 'warning');
+            return;
         }
-    }
-    if (eventoAtual) todosOsEventos.push(eventoAtual);
-    const eventosValidos = todosOsEventos.filter(ev => ev.codigo);
 
-    if (!painelJaPreenchido) {
-        // ==================================================
-        // MODO 1: CARGA INICIAL (PAINEL VAZIO)
-        // ==================================================
-        console.log("Executando Modo de Carga Inicial...");
-        AppState.totalOcorrenciasCriadas = eventosValidos.length;
-        // NOVO BLOCO PARA INSERIR NO LUGAR
-    eventosValidos.forEach(cardData => {
-        const statusFinal = this.avaliarStatus(cardData);
-        const cardElement = this.criarElementoCard(`card-${AppState.cardIdCounter++}`, cardData);
+        const painelJaPreenchido = document.querySelector('#tab-semaforo .kanban-card') !== null;
 
-    if (statusFinal === 'NORMALIZADO') {
-        DOM.colunaNormalizados.prepend(cardElement);
-        this.ultimoLoteNormalizado.push(cardElement.id);
-        } else if (statusFinal === 'SEM_NECESSIDADE') {
-        document.querySelector('#coluna-sem-necessidade .kanban-cards-container').appendChild(cardElement);
-    } else { // PENDENTE
-        document.querySelector('#coluna-espera .kanban-cards-container').appendChild(cardElement);
-    }
-});
+        const linhas = textoBruto.split('\n');
+        const todosOsEventos = [];
+        let eventoAtual = null;
+        let secaoAtual = 'PENDENTE';
 
-        showToast(`${eventosValidos.length} ocorrência(s) processada(s).`, 'success');
+        for (const linha of linhas) {
+            if (/NORMALIZADOS✅/.test(linha)) { secaoAtual = 'NORMALIZADO'; continue; }
+            if (/PENDENTES❌/.test(linha)) { secaoAtual = 'PENDENTE'; continue; }
 
-    } else {
-        // ==================================================
-        // MODO 2: ATUALIZAÇÃO INTELIGENTE (PAINEL PREENCHIDO)
-        // ==================================================
-        console.log("Executando Modo de Atualização Inteligente...");
-        const mapaCardsAtuais = new Map();
-        document.querySelectorAll('#tab-semaforo .kanban-card').forEach(card => {
-            const codigo = card.dataset.codigo;
-            const estaNormalizado = card.closest('#coluna-normalizados') !== null;
-            mapaCardsAtuais.set(codigo, {
-                element: card,
-                status: estaNormalizado ? 'NORMALIZADO' : 'PENDENTE'
-            });
-        });
-
-        let novosCardsCriados = 0;
-        let cardsAtualizados = 0;
-
-        eventosValidos.forEach(eventoData => {
-            const codigo = eventoData.codigo;
-            const statusNovoEvento = this.avaliarStatus(eventoData);
-            const cardExistente = mapaCardsAtuais.get(codigo);
-
-            if (!cardExistente) {
-                this.criarNovoCard(eventoData, statusNovoEvento);
-                novosCardsCriados++;
-            } else {
-                const statusAntigo = cardExistente.status;
-                if (statusAntigo !== 'NORMALIZADO' && statusNovoEvento === 'NORMALIZADO') {
-                    DOM.colunaNormalizados.prepend(cardExistente.element);
-                    cardsAtualizados++;
-
-                    // REGISTRA NO ÚLTIMO LOTE
-                    this.ultimoLoteNormalizado.push(cardExistente.element.id);
-
-                    cardExistente.element.classList.add('card-foi-normalizado');
-                    setTimeout(() => cardExistente.element.classList.remove('card-foi-normalizado'), 2000);
-                }
-
+            const dadosDaLinha = this.extrairDadosDaLinha(linha);
+            if (dadosDaLinha) {
+                if (eventoAtual) todosOsEventos.push(eventoAtual);
+                eventoAtual = { ...dadosDaLinha, secao: secaoAtual };
+            } else if (eventoAtual && linha.trim()) {
+                eventoAtual.observacoes = (eventoAtual.observacoes ? eventoAtual.observacoes + ' ' : '') + linha.trim().replace(/"/g, '');
             }
-        });
-        
-        AppState.totalOcorrenciasCriadas += novosCardsCriados;
-
-        let mensagemToast = '';
-        if (novosCardsCriados > 0) mensagemToast += `${novosCardsCriados} nova(s) ocorrência(s) adicionada(s). `;
-        if (cardsAtualizados > 0) mensagemToast += `${cardsAtualizados} ocorrência(s) atualizada(s) para Normalizado.`;
-        
-        if (mensagemToast) {
-            showToast(mensagemToast, 'success');
-        } else {
-            showToast('Nenhuma mudança detectada no relatório.', 'info');
         }
-    }
+        if (eventoAtual) todosOsEventos.push(eventoAtual);
+        const eventosValidos = todosOsEventos.filter(ev => ev.codigo);
 
-    if (this.ultimoLoteNormalizado.length > 0 && DOM.countNormalizadosGaveta) {
-    DOM.countNormalizadosGaveta.classList.add('acao-disponivel');
-}
+        if (!painelJaPreenchido) {
+            // MODO 1: CARGA INICIAL
+            console.log("Executando Modo de Carga Inicial...");
+            AppState.totalOcorrenciasCriadas = eventosValidos.length;
+            eventosValidos.forEach(cardData => {
+                const statusFinal = this.avaliarStatus(cardData);
+                const cardElement = this.criarElementoCard(`card-${AppState.cardIdCounter++}`, cardData);
 
+                if (statusFinal === 'NORMALIZADO') {
+                    DOM.colunaNormalizados.prepend(cardElement);
+                    this.ultimoLoteNormalizado.push(cardElement.id);
+                } else if (statusFinal === 'SEM_NECESSIDADE') {
+                    document.querySelector('#coluna-sem-necessidade .kanban-cards-container').appendChild(cardElement);
+                } else {
+                    document.querySelector('#coluna-espera .kanban-cards-container').appendChild(cardElement);
+                }
+            });
+            showToast(`${eventosValidos.length} ocorrência(s) processada(s).`, 'success');
 
-    // Indica que há novos normalizados para revisão
-    if (this.ultimoLoteNormalizado.length > 0 && DOM.countNormalizadosGaveta) {
-        DOM.countNormalizadosGaveta.classList.add('tem-novos');
-}
+        } else {
+            // MODO 2: ATUALIZAÇÃO INTELIGENTE
+            console.log("Executando Modo de Atualização Inteligente...");
+            const mapaCardsAtuais = new Map();
+            document.querySelectorAll('#tab-semaforo .kanban-card').forEach(card => {
+                const codigo = card.dataset.codigo;
+                const estaNormalizado = card.closest('#coluna-normalizados') !== null;
+                mapaCardsAtuais.set(codigo, {
+                    element: card,
+                    status: estaNormalizado ? 'NORMALIZADO' : 'PENDENTE'
+                });
+            });
 
+            let novosCardsCriados = 0;
+            let cardsAtualizados = 0;
 
-    // --- FINALIZAÇÃO (COMUM A AMBOS OS MODOS) ---
-    this.atualizarPainel();
-    DOM.relatorioBrutoInput.value = '';
-},
+            eventosValidos.forEach(eventoData => {
+                const codigo = eventoData.codigo;
+                const statusNovoEvento = this.avaliarStatus(eventoData);
+                const cardExistente = mapaCardsAtuais.get(codigo);
 
+                if (!cardExistente) {
+                    this.criarNovoCard(eventoData, statusNovoEvento);
+                    novosCardsCriados++;
+                } else {
+                    const statusAntigo = cardExistente.status;
+                    if (statusAntigo !== 'NORMALIZADO' && statusNovoEvento === 'NORMALIZADO') {
+                        DOM.colunaNormalizados.prepend(cardExistente.element);
+                        cardsAtualizados++;
+                        this.ultimoLoteNormalizado.push(cardExistente.element.id);
+                        cardExistente.element.classList.add('card-foi-normalizado');
+                        setTimeout(() => cardExistente.element.classList.remove('card-foi-normalizado'), 2000);
+                    }
+                }
+            });
+
+            AppState.totalOcorrenciasCriadas += novosCardsCriados;
+
+            let mensagemToast = '';
+            if (novosCardsCriados > 0) mensagemToast += `${novosCardsCriados} nova(s) ocorrência(s) adicionada(s). `;
+            if (cardsAtualizados > 0) mensagemToast += `${cardsAtualizados} ocorrência(s) atualizada(s) para Normalizado.`;
+
+            if (mensagemToast) {
+                showToast(mensagemToast, 'success');
+            } else {
+                showToast('Nenhuma mudança detectada no relatório.', 'info');
+            }
+        }
+
+        if (this.ultimoLoteNormalizado.length > 0 && DOM.countNormalizadosGaveta) {
+            DOM.countNormalizadosGaveta.classList.add('acao-disponivel');
+        }
+
+        if (this.ultimoLoteNormalizado.length > 0 && DOM.countNormalizadosGaveta) {
+            DOM.countNormalizadosGaveta.classList.add('tem-novos');
+        }
+
+        this.atualizarPainel();
+        DOM.relatorioBrutoInput.value = '';
+    },
 
     criarNovoCard(cardData, status) {
         const cardId = `card-${AppState.cardIdCounter++}`;
@@ -1721,37 +1701,36 @@ handleProcessarClick() {
             case 'SEM_NECESSIDADE':
                 document.getElementById('coluna-sem-necessidade').querySelector('.kanban-cards-container').appendChild(cardElement);
                 break;
-            default: // PENDENTE
+            default:
                 document.querySelector('#coluna-espera .kanban-cards-container').appendChild(cardElement);
                 break;
         }
     },
 
     extrairDadosDaLinha(linha) {
-    const isInvestigando = /^INVESTIGANDO\s/i.test(linha);
-    // DEPOIS
-	const match = linha.match(/(?:([A-Z\s]+)\s*)?🚦\s*([A-Z0-9]{2,8})\s*🚦\s*(.*?)\s*●\s*([A-ZÀ-Ú\s/]+)(.*)/i);
-    if (!match) return null;
+        const isInvestigando = /^INVESTIGANDO\s/i.test(linha);
+        const match = linha.match(/(?:([A-Z\s]+)\s*)?🚦\s*([A-Z0-9]{2,8})\s*🚦\s*(.*?)\s*●\s*([A-ZÀ-Ú\s/]+)(.*)/i);
+        if (!match) return null;
 
-    const dados = {
-        tipo: isInvestigando ? 'INVESTIGANDO' : (match[1] || 'N/I').trim(),      // ✅ USA isInvestigando
-        status: isInvestigando ? 'INVESTIGANDO' : (match[1] || '').trim(),       // ✅ USA isInvestigando
-        codigo: match[2].trim(),
-        endereco: match[3].trim().replace(/\s+/g, ' '),
-        problema: match[4].trim().toUpperCase(),
-        inicio: '',
-        fim: '',
-        observacoes: isInvestigando ? '' : (match[5] || '').trim()               // ✅ USA isInvestigando
-    };
+        const dados = {
+            tipo: isInvestigando ? 'INVESTIGANDO' : (match[1] || 'N/I').trim(),
+            status: isInvestigando ? 'INVESTIGANDO' : (match[1] || '').trim(),
+            codigo: match[2].trim(),
+            endereco: match[3].trim().replace(/\s+/g, ' '),
+            problema: match[4].trim().toUpperCase(),
+            inicio: '',
+            fim: '',
+            observacoes: isInvestigando ? '' : (match[5] || '').trim()
+        };
 
-    const fimMatch = linha.match(/Fim:\s*([^\t\n]+)/i);
-    if (fimMatch) dados.fim = fimMatch[1].trim();
+        const fimMatch = linha.match(/Fim:\s*([^\t\n]+)/i);
+        if (fimMatch) dados.fim = fimMatch[1].trim();
 
-    const inicioMatch = linha.match(/Início:\s*([^\t\n]+)/i);
-    if (inicioMatch) dados.inicio = inicioMatch[1].trim();
+        const inicioMatch = linha.match(/Início:\s*([^\t\n]+)/i);
+        if (inicioMatch) dados.inicio = inicioMatch[1].trim();
 
-    return dados;
-},
+        return dados;
+    },
 
     avaliarStatus(cardData) {
         if (cardData.fim && cardData.fim.trim() !== '') {
@@ -1760,7 +1739,7 @@ handleProcessarClick() {
 
         const endereco = (cardData.endereco || '').toLowerCase();
         const observacoes = (cardData.observacoes || '').toLowerCase().replace(/\s+/g, ' ');
-        
+
         const ehPgvOuEntre = endereco.includes('pgv') || endereco.startsWith('entre');
         const regexStatusOk = /cruzamento\s+(funcionando|normal|ok)/;
         const estaFuncionando = regexStatusOk.test(observacoes);
@@ -1768,83 +1747,60 @@ handleProcessarClick() {
         if (ehPgvOuEntre || estaFuncionando) {
             return 'SEM_NECESSIDADE';
         }
-        
+
         return 'PENDENTE';
     },
 
+    normalizarDatas(texto) {
+        if (!texto || typeof texto !== 'string') return '';
+        return texto.replace(/(\d{2}\/\d{2})\/\d{4}(\s+\d{2}:\d{2})/g, '$1$2');
+    },
 
+    extrairFraseTecnica(texto, status, inicio) {
+        if (String(status).trim().toUpperCase() === 'INVESTIGANDO') {
+            if (!inicio) return 'Investigando.';
+            const [data, hora] = inicio.split(' ');
+            const [dia, mes] = data.split('/');
+            return `Início: ${dia}/${mes} ${hora} Investigando.`;
+        }
 
-    // Função auxiliar - normaliza datas
-normalizarDatas(texto) {
-    if (!texto || typeof texto !== 'string') return '';
-    // Remove ano: "05/02/2026 04:14" → "05/02 04:14"
-    return texto.replace(/(\d{2}\/\d{2})\/\d{4}(\s+\d{2}:\d{2})/g, '$1$2');
-},
+        if (!texto || typeof texto !== 'string') {
+            return '';
+        }
 
-// Função principal
-extrairFraseTecnica(texto, status, inicio) {
-    
-    // INVESTIGANDO - já está correto
-    if (String(status).trim().toUpperCase() === 'INVESTIGANDO') {
-        if (!inicio) return 'Investigando.';
-        const [data, hora] = inicio.split(' ');
-        const [dia, mes] = data.split('/');
-        return `Início: ${dia}/${mes} ${hora} Investigando.`;
-    }
+        let textoLimpo = texto
+            .replace(/\*/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
 
-    // Outros casos
-    if (!texto || typeof texto !== 'string') {
-        return '';
-    }
+        textoLimpo = this.normalizarDatas(textoLimpo);
 
-    let textoLimpo = texto
-        .replace(/\*/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-
-    // 🎯 NORMALIZA TODAS AS DATAS
-    textoLimpo = this.normalizarDatas(textoLimpo);
-
-    // Primeira frase
-    const match = textoLimpo.match(/^[^.]+?\./);
-    return match ? match[0].trim() : textoLimpo;
-},
-
+        const match = textoLimpo.match(/^[^.]+?\./);
+        return match ? match[0].trim() : textoLimpo;
+    },
 
     criarElementoCard(cardId, cardData) {
-        console.log('🔴 VERSÃO DO CÓDIGO:', '2025-02-08-v2'); // ← ADICIONE ISSO
-        console.log('📦 cardData recebido:', cardData);
         const card = document.createElement('div');
         card.id = cardId;
         card.className = 'kanban-card';
         card.draggable = true;
         Object.keys(cardData).forEach(key => { if (cardData[key] !== undefined) card.dataset[key] = cardData[key]; });
-        
-        const despachoInfoHTML = (cardData.equipe || cardData.viatura) 
-            ? `<div class="card-despacho-info"><strong>Equipe:</strong> ${cardData.equipe || 'N/I'} | <strong>VT:</strong> ${cardData.viatura || 'N/I'}</div>` 
+
+        const despachoInfoHTML = (cardData.equipe || cardData.viatura)
+            ? `<div class="card-despacho-info"><strong>Equipe:</strong> ${cardData.equipe || 'N/I'} | <strong>VT:</strong> ${cardData.viatura || 'N/I'}</div>`
             : '<div class="card-despacho-info" style="display:none;"></div>';
 
-        // REGRA DETERMINÍSTICA — INVESTIGANDO
         if (String(cardData.tipo).trim().toUpperCase() === 'INVESTIGANDO') {
-            console.log('🟢 INVESTIGANDO detectado!');
-            console.log('   inicio:', cardData.inicio);
-            console.log('   observacoes ANTES:', cardData.observacoes);
             cardData.observacoes = '';
-            console.log('   observacoes DEPOIS:', cardData.observacoes);
-
         }
-
 
         let fraseTecnica = '';
 
         if (String(cardData.tipo).trim().toUpperCase() === 'INVESTIGANDO') {
             if (cardData.inicio) {
                 const [data, hora] = cardData.inicio.split(' ');
-                console.log('   data:', data, '| hora:', hora);
                 const [dia, mes] = data.split('/');
-                console.log('   dia:', dia, '| mes:', mes);
                 fraseTecnica = `Início: ${dia}/${mes} ${hora} Investigando.`;
-                console.log('   fraseTecnica gerada:', fraseTecnica);
             } else {
                 fraseTecnica = 'Investigando.';
             }
@@ -1856,18 +1812,12 @@ extrairFraseTecnica(texto, status, inicio) {
             );
         }
 
-
-
-
-
         card.innerHTML = `
-
             <div class="card-header"><strong>${cardData.codigo}</strong><span class="card-status-tag">${cardData.problema}</span></div>
             <div class="card-body">
                 <div class="card-endereco">${cardData.endereco}</div>
                 ${fraseTecnica ? `<div class="card-frase-tecnica">${fraseTecnica}</div>` : ''}
             </div>
-
             ${despachoInfoHTML}
             <div class="card-footer">
                 <button class="btn-card-action copy-location" title="Copiar Localização"><i class="fa-solid fa-location-crosshairs"></i></button>
@@ -1888,93 +1838,106 @@ extrairFraseTecnica(texto, status, inicio) {
         };
         const totalNormalizados = contadores.normalizados;
         const totalPendentes = Object.values(contadores).reduce((a, b) => a + b, 0) - totalNormalizados;
-        
+
         DOM.displayTotal.textContent = AppState.totalOcorrenciasCriadas;
         DOM.displayPendentes.textContent = totalPendentes;
         DOM.displayNormalizados.textContent = totalNormalizados;
         DOM.countNormalizadosGaveta.textContent = totalNormalizados;
-        
+
         Object.keys(contadores).forEach(key => {
             const elId = `count-${key.replace('_', '-')}`;
             const el = document.getElementById(elId);
             if (el) el.textContent = contadores[key];
         });
-        
+
         this.gerarPreviewRelatorio();
         this.salvarEstado();
     },
 
     gerarPreviewRelatorio() {
-    const incluirNormalizados = DOM.checkIncluirNormalizados.checked;
+        const incluirNormalizados = DOM.checkIncluirNormalizados.checked;
 
-    // Data e hora
-    const agora = new Date();
-    const hora  = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    const data  = agora.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
-                       .replace(/\//g, '.');
+        // Data e hora
+        const agora = new Date();
+        const hora  = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const data  = agora.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+                           .replace(/\//g, '.');
 
-    // Contadores atuais
-    const totalOcorrencias = parseInt(DOM.displayTotal.textContent)       || 0;
-    const totalNormalizados= parseInt(DOM.displayNormalizados.textContent) || 0;
-    const totalPendentes   = parseInt(DOM.displayPendentes.textContent)    || 0;
+        // Contadores atuais
+        const totalOcorrencias  = parseInt(DOM.displayTotal.textContent)        || 0;
+        const totalNormalizados = parseInt(DOM.displayNormalizados.textContent)  || 0;
+        const totalPendentes    = parseInt(DOM.displayPendentes.textContent)     || 0;
 
-    // Indicador de status baseado em pendentes em espera
-    const espera = document.querySelectorAll('#coluna-espera .kanban-card').length;
-    let statusEmoji, statusSufixo;
-    if (espera <= 3) {
-        statusEmoji  = '🟢🟢';
-        statusSufixo = '✅';
-    } else if (espera <= 7) {
-        statusEmoji  = '🟡🟡';
-        statusSufixo = '⚠️';
-    } else {
-        statusEmoji  = '🔴🔴';
-        statusSufixo = '🚨';
-    }
+        // ── LÓGICA DE CORES CORRIGIDA ────────────────────────────────────────────
+        // Considera TODAS as colunas ativas (exclui gaveta de Normalizados).
+        // A cor verde só aparece quando NÃO há nenhum card em nenhuma das
+        // colunas de ocorrência ativa do painel Kanban.
+        //
+        //   0 ocorrências ativas            → 🟢 Verde  ✅
+        //   >= 1 e <= 5 ocorrências ativas → 🟡 Amarelo ⚠️
+        //   5 10 ocorrências ativas         → 🔴 Vermelho 🚨
+        // ────────────────────────────────────────────────────────────────────────
+        const totalAtivos =
+            document.querySelectorAll('#coluna-espera .kanban-card').length +
+            document.querySelectorAll('#coluna-sem-necessidade .kanban-card').length +
+            document.querySelectorAll('#coluna-vl .kanban-card').length +
+            document.querySelectorAll('#coluna-amc .kanban-card').length;
 
-    const linha = '----------';
-    let texto = `${statusEmoji} STATUS SEMAFÓRICO ${statusEmoji}\n` +
-                `${linha} ${hora} - ${data} ${linha}\n\n` +
-                `*Ocorrências (${totalOcorrencias})*\n` +
-                `*Pendentes (${totalPendentes})* ${statusSufixo}\n` +
-                `*Normalizados (${totalNormalizados})*\n`;
-
-    const getCardText = (card) => {
-        let t = `${card.dataset.codigo} 🚦 ${card.dataset.endereco} ● ${card.dataset.problema}`;
-        if (card.dataset.equipe || card.dataset.viatura) {
-            t += ` (Equipe: ${card.dataset.equipe || 'N/I'}, VT: ${card.dataset.viatura || 'N/I'})`;
+        let statusEmoji, statusSufixo;
+        if (totalAtivos === 0) {
+            statusEmoji  = '🟢🟢';
+            statusSufixo = '✅';
+        } else if (totalAtivos >= 1 && totalAtivos <= 5) {
+            statusEmoji  = '🟡🟡';
+            statusSufixo = '⚠️';
+        } else {
+            statusEmoji  = '🔴🔴';
+            statusSufixo = '🚨';
         }
-        return t;
-    };
 
-    const vlCards  = Array.from(document.querySelectorAll('#coluna-vl .kanban-card')).map(getCardText);
-    const amcCards = Array.from(document.querySelectorAll('#coluna-amc .kanban-card')).map(getCardText);
+        const linha = '----------';
+        let texto = `${statusEmoji} STATUS SEMAFÓRICO ${statusEmoji}\n` +
+                    `${linha} ${hora} - ${data} ${linha}\n\n` +
+                    `*Ocorrências (${totalOcorrencias})*\n` +
+                    `*Pendentes (${totalPendentes})* ${statusSufixo}\n` +
+                    `*Normalizados (${totalNormalizados})*\n`;
 
-    if (vlCards.length > 0 || amcCards.length > 0) {
-        texto += `\n---\n`;
-        if (vlCards.length  > 0) texto += `\n🚓🟡 *VIA LIVRE (${vlCards.length}):*\n${vlCards.join('\n')}\n`;
-        if (amcCards.length > 0) texto += `\n🚓🔵 *AMC (${amcCards.length}):*\n${amcCards.join('\n')}\n`;
-    }
+        const getCardText = (card) => {
+            let t = `${card.dataset.codigo} 🚦 ${card.dataset.endereco} ● ${card.dataset.problema}`;
+            if (card.dataset.equipe || card.dataset.viatura) {
+                t += ` (Equipe: ${card.dataset.equipe || 'N/I'}, VT: ${card.dataset.viatura || 'N/I'})`;
+            }
+            return t;
+        };
 
-    const aguardando   = Array.from(document.querySelectorAll('#coluna-espera .kanban-card')).map(getCardText);
-    const semNecessidade = Array.from(document.querySelectorAll('#coluna-sem-necessidade .kanban-card')).map(getCardText);
+        const vlCards  = Array.from(document.querySelectorAll('#coluna-vl .kanban-card')).map(getCardText);
+        const amcCards = Array.from(document.querySelectorAll('#coluna-amc .kanban-card')).map(getCardText);
 
-    if (aguardando.length > 0 || semNecessidade.length > 0) {
-        texto += `\n---\n\n⏳ *PENDENTES / OUTROS MOTIVOS*\n`;
-        if (aguardando.length > 0)
-            texto += `*- Aguardando atendimento:*\n${aguardando.join('\n')}\n`;
-        if (semNecessidade.length > 0)
-            texto += `\n*- Sem necessidade de operação:*\n${semNecessidade.join('\n')}\n`;
-    }
+        if (vlCards.length > 0 || amcCards.length > 0) {
+            texto += `\n---\n`;
+            if (vlCards.length  > 0) texto += `\n🚓🟡 *VIA LIVRE (${vlCards.length}):*\n${vlCards.join('\n')}\n`;
+            if (amcCards.length > 0) texto += `\n🚓🔵 *AMC (${amcCards.length}):*\n${amcCards.join('\n')}\n`;
+        }
 
-    if (incluirNormalizados) {
-        const norm = Array.from(DOM.colunaNormalizados.querySelectorAll('.kanban-card')).map(getCardText);
-        if (norm.length > 0) texto += `\n---\n\n✅ *NORMALIZADOS (${norm.length}):*\n${norm.join('\n')}\n`;
-    }
+        const aguardando     = Array.from(document.querySelectorAll('#coluna-espera .kanban-card')).map(getCardText);
+        const semNecessidade = Array.from(document.querySelectorAll('#coluna-sem-necessidade .kanban-card')).map(getCardText);
 
-    DOM.relatorioFinalPreview.value = texto.trim();
-    return DOM.relatorioFinalPreview.value;
-},
+        if (aguardando.length > 0 || semNecessidade.length > 0) {
+            texto += `\n---\n\n⏳ *PENDENTES / OUTROS MOTIVOS*\n`;
+            if (aguardando.length > 0)
+                texto += `*- Aguardando atendimento:*\n${aguardando.join('\n')}\n`;
+            if (semNecessidade.length > 0)
+                texto += `\n*- Sem necessidade de operação:*\n${semNecessidade.join('\n')}\n`;
+        }
+
+        if (incluirNormalizados) {
+            const norm = Array.from(DOM.colunaNormalizados.querySelectorAll('.kanban-card')).map(getCardText);
+            if (norm.length > 0) texto += `\n---\n\n✅ *NORMALIZADOS (${norm.length}):*\n${norm.join('\n')}\n`;
+        }
+
+        DOM.relatorioFinalPreview.value = texto.trim();
+        return DOM.relatorioFinalPreview.value;
+    },
 
     salvarEstado() {
         const estado = {
@@ -2027,24 +1990,24 @@ extrairFraseTecnica(texto, status, inicio) {
         }
     },
 
-    handleVisualizarRelatorioClick() { 
-        const textoRelatorio = this.gerarPreviewRelatorio(); 
-        DOM.modalRelatorioTexto.value = textoRelatorio; 
-        abrirModal(DOM.modalRelatorio); 
+    handleVisualizarRelatorioClick() {
+        const textoRelatorio = this.gerarPreviewRelatorio();
+        DOM.modalRelatorioTexto.value = textoRelatorio;
+        abrirModal(DOM.modalRelatorio);
     },
 
-    handleCopiarModalClick() { 
-        navigator.clipboard.writeText(DOM.modalRelatorioTexto.value).then(() => { 
-            fecharModal(DOM.modalRelatorio); 
-            showToast('Relatório copiado!', 'success'); 
-        }); 
+    handleCopiarModalClick() {
+        navigator.clipboard.writeText(DOM.modalRelatorioTexto.value).then(() => {
+            fecharModal(DOM.modalRelatorio);
+            showToast('Relatório copiado!', 'success');
+        });
     },
 
-    handleConfigChange() { 
-        this.gerarPreviewRelatorio(); 
-        this.salvarEstado(); 
+    handleConfigChange() {
+        this.gerarPreviewRelatorio();
+        this.salvarEstado();
     },
-    
+
     handleKanbanBoardClick(e) {
         const cardElement = e.target.closest('.kanban-card');
         if (!cardElement) return;
@@ -2061,24 +2024,21 @@ extrairFraseTecnica(texto, status, inicio) {
     },
 
     copiarLocalizacao(card) {
-    const codigo = card.dataset.codigo || '';
-    const endereco = card.dataset.endereco || '';
-    const problema = card.dataset.problema || '';
-
-    const textoCopiar = `*${codigo}🚦 ${endereco} ● ${problema}*`;
-
-    navigator.clipboard.writeText(textoCopiar).then(() => {
-        showToast('Localização copiada!', 'success');
-    });
-},
-
+        const codigo   = card.dataset.codigo   || '';
+        const endereco = card.dataset.endereco || '';
+        const problema = card.dataset.problema || '';
+        const textoCopiar = `*${codigo}🚦 ${endereco} ● ${problema}*`;
+        navigator.clipboard.writeText(textoCopiar).then(() => {
+            showToast('Localização copiada!', 'success');
+        });
+    },
 
     abrirModalDespacho(cardId) {
         const card = document.getElementById(cardId);
         if (!card) return;
         DOM.despachoSemaforoCardId.value = cardId;
         DOM.despachoSemaforoEquipe.value = card.dataset.equipe || '';
-        DOM.despachoSemaforoVt.value = card.dataset.viatura || '';
+        DOM.despachoSemaforoVt.value     = card.dataset.viatura || '';
         abrirModal(DOM.modalDespachoSemaforo);
     },
 
@@ -2088,10 +2048,10 @@ extrairFraseTecnica(texto, status, inicio) {
         if (!card) return;
 
         const equipe = DOM.despachoSemaforoEquipe.value.trim().toUpperCase();
-        const vt = DOM.despachoSemaforoVt.value.trim().toUpperCase();
+        const vt     = DOM.despachoSemaforoVt.value.trim().toUpperCase();
 
-        card.dataset.equipe = equipe;
-        card.dataset.viatura = vt;
+        card.dataset.equipe   = equipe;
+        card.dataset.viatura  = vt;
 
         const despachoInfoDiv = card.querySelector('.card-despacho-info');
         if (equipe || vt) {
@@ -2117,16 +2077,16 @@ extrairFraseTecnica(texto, status, inicio) {
     abrirModalEdicao(cardId) {
         const card = document.getElementById(cardId);
         if (!card) return;
-        DOM.edicaoCardId.value = cardId;
-        DOM.edicaoCodigo.value = card.dataset.codigo;
-        DOM.edicaoEndereco.value = card.dataset.endereco;
-        DOM.edicaoProblema.value = card.dataset.problema;
+        DOM.edicaoCardId.value     = cardId;
+        DOM.edicaoCodigo.value     = card.dataset.codigo;
+        DOM.edicaoEndereco.value   = card.dataset.endereco;
+        DOM.edicaoProblema.value   = card.dataset.problema;
         abrirModal(DOM.modalEdicao);
     },
 
     handleSalvarEdicaoClick() {
         const cardId = DOM.edicaoCardId.value;
-        const card = document.getElementById(cardId);
+        const card   = document.getElementById(cardId);
         if (!card) return;
         const novoEndereco = DOM.edicaoEndereco.value.trim();
         const novoProblema = DOM.edicaoProblema.value;
@@ -2135,14 +2095,13 @@ extrairFraseTecnica(texto, status, inicio) {
         const dadosAntigos = `Endereço: ${card.dataset.endereco}, Problema: ${card.dataset.problema}`;
         card.dataset.endereco = novoEndereco;
         card.dataset.problema = novoProblema;
-        
+
         const body = card.querySelector('.card-body');
         const fraseTecnica = this.extrairFraseTecnica(
-        card.dataset.observacoes,
-        card.dataset.status,
-        card.dataset.inicio
-    );
-
+            card.dataset.observacoes,
+            card.dataset.status,
+            card.dataset.inicio
+        );
 
         body.innerHTML = `
             <div class="card-endereco">${novoEndereco}</div>
@@ -2150,7 +2109,7 @@ extrairFraseTecnica(texto, status, inicio) {
         `;
 
         card.querySelector('.card-status-tag').textContent = novoProblema;
-        
+
         fecharModal(DOM.modalEdicao);
         this.atualizarPainel();
         showToast('Ocorrência editada!', 'success');
@@ -2161,7 +2120,7 @@ extrairFraseTecnica(texto, status, inicio) {
         const shouldBeOpen = forceState !== undefined ? forceState : !DOM.gavetaArquivados.classList.contains('open');
         DOM.gavetaArquivados.classList.toggle('open', shouldBeOpen);
         DOM.kanbanWrapper.classList.toggle('gaveta-open', shouldBeOpen);
-        
+
         const btnAbrir = document.getElementById('btn-abrir-gaveta');
         if (btnAbrir) {
             btnAbrir.classList.toggle('hidden', shouldBeOpen);
@@ -2170,54 +2129,54 @@ extrairFraseTecnica(texto, status, inicio) {
 
     cardExiste: (codigo) => document.querySelector(`#tab-semaforo .kanban-card[data-codigo='${codigo}']`) !== null,
 
-    handleDragStart(e) { 
-        if (e.target.classList.contains('kanban-card')) { 
-            AppState.draggedCard = e.target; 
-            AppState.placeholder = document.createElement('div'); 
-            AppState.placeholder.className = 'drag-placeholder'; 
-            AppState.placeholder.style.height = `${e.target.offsetHeight}px`; 
-            setTimeout(() => e.target.classList.add('dragging'), 0); 
-        } 
+    handleDragStart(e) {
+        if (e.target.classList.contains('kanban-card')) {
+            AppState.draggedCard  = e.target;
+            AppState.placeholder  = document.createElement('div');
+            AppState.placeholder.className   = 'drag-placeholder';
+            AppState.placeholder.style.height = `${e.target.offsetHeight}px`;
+            setTimeout(() => e.target.classList.add('dragging'), 0);
+        }
     },
 
-    handleDragEnd(e) { 
-        if(AppState.draggedCard) { AppState.draggedCard.classList.remove('dragging'); } 
-        if(AppState.placeholder && AppState.placeholder.parentNode) { AppState.placeholder.parentNode.removeChild(AppState.placeholder); } 
-        AppState.draggedCard = null; 
-        AppState.placeholder = null; 
-        document.querySelectorAll('.kanban-cards-container.drag-over').forEach(c => c.classList.remove('drag-over')); 
+    handleDragEnd(e) {
+        if (AppState.draggedCard) { AppState.draggedCard.classList.remove('dragging'); }
+        if (AppState.placeholder && AppState.placeholder.parentNode) { AppState.placeholder.parentNode.removeChild(AppState.placeholder); }
+        AppState.draggedCard = null;
+        AppState.placeholder = null;
+        document.querySelectorAll('.kanban-cards-container.drag-over').forEach(c => c.classList.remove('drag-over'));
     },
 
-    handleDragOver(e) { 
-        e.preventDefault(); 
-        const container = e.target.closest('.kanban-cards-container'); 
-        if (container && AppState.draggedCard && AppState.draggedCard.classList.contains('kanban-card')) { 
-            container.classList.add('drag-over'); 
-            const afterElement = this.getDragAfterElement(container, e.clientY); 
-            if (afterElement == null) { 
-                container.appendChild(AppState.placeholder); 
-            } else { 
-                container.insertBefore(AppState.placeholder, afterElement); 
-            } 
-        } 
+    handleDragOver(e) {
+        e.preventDefault();
+        const container = e.target.closest('.kanban-cards-container');
+        if (container && AppState.draggedCard && AppState.draggedCard.classList.contains('kanban-card')) {
+            container.classList.add('drag-over');
+            const afterElement = this.getDragAfterElement(container, e.clientY);
+            if (afterElement == null) {
+                container.appendChild(AppState.placeholder);
+            } else {
+                container.insertBefore(AppState.placeholder, afterElement);
+            }
+        }
     },
 
-    getDragAfterElement(container, y) { 
-        const draggableElements = [...container.querySelectorAll('.kanban-card:not(.dragging)')]; 
-        return draggableElements.reduce((closest, child) => { 
-            const box = child.getBoundingClientRect(); 
-            const offset = y - box.top - box.height / 2; 
-            if (offset < 0 && offset > closest.offset) { 
-                return { offset: offset, element: child }; 
-            } else { 
-                return closest; 
-            } 
-        }, { offset: Number.NEGATIVE_INFINITY }).element; 
+    getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll('.kanban-card:not(.dragging)')];
+        return draggableElements.reduce((closest, child) => {
+            const box    = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
     },
 
-    handleDragLeave(e) { 
-        const container = e.target.closest('.kanban-cards-container'); 
-        if(container) container.classList.remove('drag-over'); 
+    handleDragLeave(e) {
+        const container = e.target.closest('.kanban-cards-container');
+        if (container) container.classList.remove('drag-over');
     },
 
     handleDrop(e) {
@@ -2233,7 +2192,7 @@ extrairFraseTecnica(texto, status, inicio) {
             showToast('Card movido!', 'success');
 
             try {
-                const coluna = destinoContainer.closest('.kanban-column, #gaveta-arquivados');
+                const coluna     = destinoContainer.closest('.kanban-column, #gaveta-arquivados');
                 const nomeColuna = coluna.querySelector('.kanban-column-header .header-text').textContent.trim();
                 registrarAcao(`Card Semafórico '${AppState.draggedCard.dataset.codigo}' movido para '${nomeColuna}'.`);
             } catch (error) {
@@ -2243,7 +2202,7 @@ extrairFraseTecnica(texto, status, inicio) {
         }
         if (destinoContainer) destinoContainer.classList.remove('drag-over');
     },
-    
+
     limparPainel() {
         if (confirm("Tem certeza que deseja limpar TODOS os dados da aba SEMAFÓRICO?")) {
             localStorage.removeItem(AppState.STORAGE_KEY_SEMAFORO);
@@ -2257,55 +2216,35 @@ extrairFraseTecnica(texto, status, inicio) {
         }
     },
 
-    /**
-    * Inicializa a busca por texto em cada coluna do kanban.
-    * A busca é aplicada apenas aos cards da coluna correspondente.
-    */
     inicializarBuscaPorColuna() {
-    const inputs = document.querySelectorAll('.kanban-search');
-
-    inputs.forEach(input => {
-        input.addEventListener('input', () => {
-
-        // Termo digitado pelo usuário
-        const termo = input.value.trim().toLowerCase();
-
-        // Coluna associada ao campo de busca
-        const colunaId = input.dataset.coluna;
-        const coluna = document.getElementById(colunaId);
-        if (!coluna) return;
-
-        // Container de cards da coluna
-        const cardsContainer = coluna.querySelector('.kanban-cards-container');
-        if (!cardsContainer) return;
-
-        // Filtra apenas os cards desta coluna
-        Array.from(cardsContainer.children).forEach(card => {
-            const texto = card.innerText.toLowerCase();
-            card.style.display = texto.includes(termo) ? '' : 'none';
+        const inputs = document.querySelectorAll('.kanban-search');
+        inputs.forEach(input => {
+            input.addEventListener('input', () => {
+                const termo    = input.value.trim().toLowerCase();
+                const colunaId = input.dataset.coluna;
+                const coluna   = document.getElementById(colunaId);
+                if (!coluna) return;
+                const cardsContainer = coluna.querySelector('.kanban-cards-container');
+                if (!cardsContainer) return;
+                Array.from(cardsContainer.children).forEach(card => {
+                    const texto  = card.innerText.toLowerCase();
+                    card.style.display = texto.includes(termo) ? '' : 'none';
+                });
+            });
         });
-        });
-    });
     },
 
-                /**
-        * Destaca os cards normalizados no último processamento.
-        */
-        destacarUltimosNormalizados() {
-            // Remove qualquer destaque anterior
-            document.querySelectorAll('.kanban-card.highlight-recente')
-                .forEach(card => card.classList.remove('highlight-recente'));
+    destacarUltimosNormalizados() {
+        document.querySelectorAll('.kanban-card.highlight-recente')
+            .forEach(card => card.classList.remove('highlight-recente'));
 
-            // Aplica destaque ao último lote
-            this.ultimoLoteNormalizado.forEach(cardId => {
-                const card = document.getElementById(cardId);
-                if (card) {
-                    card.classList.add('highlight-recente');
-                }
-            });
-        },
-
-
+        this.ultimoLoteNormalizado.forEach(cardId => {
+            const card = document.getElementById(cardId);
+            if (card) {
+                card.classList.add('highlight-recente');
+            }
+        });
+    },
 
 };
 
