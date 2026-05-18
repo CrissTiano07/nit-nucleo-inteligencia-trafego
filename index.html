@@ -1708,29 +1708,59 @@ const Semaforo = {
     },
 
     extrairDadosDaLinha(linha) {
-        const isInvestigando = /^INVESTIGANDO\s/i.test(linha);
-        const match = linha.match(/(?:([A-Z\s]+)\s*)?🚦\s*([A-Z0-9]{2,8})\s*🚦\s*(.*?)\s*●\s*([A-ZÀ-Ú\s/]+)(.*)/i);
-        if (!match) return null;
+    // Ignora linhas que não têm o padrão básico
+    if (!linha.includes('🚦')) return null;
 
-        const dados = {
-            tipo: isInvestigando ? 'INVESTIGANDO' : (match[1] || 'N/I').trim(),
-            status: isInvestigando ? 'INVESTIGANDO' : (match[1] || '').trim(),
-            codigo: match[2].trim(),
-            endereco: match[3].trim().replace(/\s+/g, ' '),
-            problema: match[4].trim().toUpperCase(),
-            inicio: '',
-            fim: '',
-            observacoes: isInvestigando ? '' : (match[5] || '').trim()
-        };
+    // Extrai o tipo: pega a primeira palavra(s) antes do primeiro "*🚦" ou "🚦"
+    let tipo = '';
+    let tipoMatch = linha.match(/^([A-Z\s]+?)\s*[*]?🚦/);
+    if (tipoMatch) {
+        let tipoRaw = tipoMatch[1].trim();
+        if (tipoRaw.includes('FALHA')) tipo = 'FALHA';
+        else if (tipoRaw.includes('ENEL')) tipo = 'ENEL';
+        else if (tipoRaw.includes('FURTO')) tipo = 'FURTO';
+        else if (tipoRaw.includes('INVESTIGANDO')) tipo = 'INVESTIGANDO';
+        else if (tipoRaw.includes('IMPROCEDENTE')) tipo = 'IMPROCEDENTE';
+        else tipo = tipoRaw.split(' ')[0];
+    }
 
-        const fimMatch = linha.match(/Fim:\s*([^\t\n]+)/i);
-        if (fimMatch) dados.fim = fimMatch[1].trim();
+    // Agora extrai código, endereço e problema
+    const match = linha.match(/(?:[A-Z\s]+?)?\s*[*]?🚦\s*([A-Z0-9]{2,8})\s*🚦\s*(.*?)\s*●\s*([A-ZÀ-Ú\s/]+?)\s*●?\s*/i);
+    if (!match) return null;
 
-        const inicioMatch = linha.match(/Início:\s*([^\t\n]+)/i);
-        if (inicioMatch) dados.inicio = inicioMatch[1].trim();
+    const codigo = match[1].trim();
+    const endereco = match[2].trim().replace(/\s+/g, ' ');
+    let problema = match[3].trim().toUpperCase();
 
-        return dados;
-    },
+    // Extrai data/hora de início e fim
+    let inicio = '';
+    let fim = '';
+    const inicioMatch = linha.match(/Início:\s*([\d\/]+\s+[\d:]+)/i);
+    if (inicioMatch) inicio = inicioMatch[1].trim();
+    const fimMatch = linha.match(/Fim:\s*([\d\/]+\s+[\d:]+)/i);
+    if (fimMatch) fim = fimMatch[1].trim();
+
+    // Observações: tudo depois do problema
+    let observacoes = '';
+    const obsStart = linha.indexOf('●', linha.indexOf(problema));
+    if (obsStart !== -1) {
+        observacoes = linha.substring(obsStart + 1).replace(/\s+/g, ' ').trim();
+        observacoes = observacoes.replace(/Início:\s*[\d\/]+\s+[\d:]+/i, '');
+        observacoes = observacoes.replace(/Fim:\s*[\d\/]+\s+[\d:]+/i, '');
+        observacoes = observacoes.trim();
+    }
+
+    return {
+        tipo: tipo,
+        codigo: codigo,
+        endereco: endereco,
+        problema: problema,
+        inicio: inicio,
+        fim: fim,
+        observacoes: observacoes,
+        status: ''
+    };
+},
 
     avaliarStatus(cardData) {
         if (cardData.fim && cardData.fim.trim() !== '') {
