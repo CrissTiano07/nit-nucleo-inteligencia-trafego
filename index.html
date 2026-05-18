@@ -1903,12 +1903,41 @@ const Semaforo = {
                     `*Normalizados (${totalNormalizados})*\n`;
 
         const getCardText = (card) => {
-            let t = `${card.dataset.codigo} 🚦 ${card.dataset.endereco} ● ${card.dataset.problema}`;
-            if (card.dataset.equipe || card.dataset.viatura) {
-                t += ` (Equipe: ${card.dataset.equipe || 'N/I'}, VT: ${card.dataset.viatura || 'N/I'})`;
+    // Pega os dados básicos
+    let codigo   = card.dataset.codigo;
+    let endereco = card.dataset.endereco;
+    let problema = card.dataset.problema;   // ex: APAGADO, PISCANTE
+    let tipo     = card.dataset.tipo || ''; // ex: FURTO, INVESTIGANDO
+    let inicio   = card.dataset.inicio || ''; // formato "DD/MM/AAAA HH:MM"
+
+    // Se não tiver tipo, usa "N/I"
+    if (!tipo) tipo = 'N/I';
+
+    // Formata a data/hora para "Desde DD/MM - HH:MM"
+    let desde = '';
+    if (inicio) {
+        // A data original pode ser "17/05/2026 11:32"
+        let partes = inicio.split(' ');
+        if (partes.length >= 2) {
+            let dataParte = partes[0].split('/'); // ["17", "05", "2026"]
+            let horaParte = partes[1];             // "11:32"
+            if (dataParte.length >= 2) {
+                let diaMes = `${dataParte[0]}/${dataParte[1]}`; // "17/05"
+                desde = ` - Desde ${diaMes} - ${horaParte}`;
             }
-            return t;
-        };
+        }
+    }
+
+    // Monta a string final no padrão solicitado
+    // Ex: 572 🚦 AV. GAL. OSÓRIO ... ● *FURTO - Desde 17/05 - 11h32 • APAGADO*
+    let texto = `${codigo} 🚦 ${endereco} ● *${tipo}${desde} • ${problema}*`;
+
+    // Mantém informação de equipe se existir (opcional)
+    if (card.dataset.equipe || card.dataset.viatura) {
+        texto += ` (Equipe: ${card.dataset.equipe || 'N/I'}, VT: ${card.dataset.viatura || 'N/I'})`;
+    }
+    return texto;
+};
 
         const vlCards  = Array.from(document.querySelectorAll('#coluna-vl .kanban-card')).map(getCardText);
         const amcCards = Array.from(document.querySelectorAll('#coluna-amc .kanban-card')).map(getCardText);
